@@ -25,3 +25,10 @@ plugins:
     enabled: false
     # location: "San Francisco, CA"   # Uncomment when implementing
     # max_price: 1500000
+
+# ---------------------------------------------------------------------------
+# Delivery settings
+# ---------------------------------------------------------------------------
+delivery:
+  max_retries: 3          # Attempts before marking a message as failed
+  retry_backoff_base: 2   # Exponential backoff: wait = base^attempt seconds

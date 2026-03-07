@@ -15,5 +15,8 @@ env/
 *.log
 logs/
 
+# Database
+vibebot.db
+
 # macOS
 .DS_Store
