@@ -3,10 +3,10 @@
 # LLM settings
 # ---------------------------------------------------------------------------
 llm:
-  # Supported providers: anthropic, openai
-  provider: anthropic
+  # Supported providers: anthropic, openai, ollama
+  provider: ollama
   # Any model ID supported by the chosen provider
-  model: claude-haiku-4-5-20251001
+  model: qwen3:8b
 
 # ---------------------------------------------------------------------------
 # Plugin settings
