@@ -15,7 +15,7 @@ Scheduling (Mac mini — launchd):
 import logging
 import os
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import yaml
@@ -72,6 +72,7 @@ def load_config(path: Path) -> dict:
 
 def build_header() -> list[dict]:
     today = date.today().strftime("%A, %B %-d, %Y")
+    now = datetime.now().strftime("%-I:%M %p")
     return [
         {
             "type": "header",
@@ -80,7 +81,16 @@ def build_header() -> list[dict]:
                 "text": f"🤖 VibeBot Daily Digest — {today}",
                 "emoji": True,
             },
-        }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"Your AI-curated morning briefing  ·  Sent at {now}",
+                }
+            ],
+        },
     ]
 
 
@@ -141,6 +151,13 @@ def main() -> None:
     if enabled_count == 0:
         log.warning("No plugins produced output. Nothing to send.")
         return
+
+    # Footer
+    all_blocks.append({"type": "divider"})
+    all_blocks.append({
+        "type": "context",
+        "elements": [{"type": "mrkdwn", "text": "🤖 _Powered by VibeBot_"}],
+    })
 
     # Send to Slack
     log.info("Sending digest to Slack (%d total blocks).", len(all_blocks))

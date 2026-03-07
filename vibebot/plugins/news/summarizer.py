@@ -6,28 +6,39 @@ from langchain_core.output_parsers import StrOutputParser
 _PROMPT = ChatPromptTemplate.from_messages([
     (
         "system",
-        "You are a concise news editor. Summarize news articles in 2-3 clear, "
-        "engaging sentences for a general audience. Be informative and neutral.",
+        "You are a sharp news editor writing for a busy professional audience. "
+        "Given a news article, write two things:\n"
+        "1. SUMMARY: Exactly 1 punchy sentence. Lead with the most interesting angle. "
+        "Active voice, no filler phrases, don't start with the article title.\n"
+        "2. WHY: Exactly 1 sentence explaining the broader significance or impact.\n\n"
+        "Respond in exactly this format (no extra text):\n"
+        "SUMMARY: <sentence>\n"
+        "WHY: <sentence>",
     ),
     (
         "human",
-        "Article title: {title}\n\nArticle description: {description}\n\n"
-        "Write a 2-3 sentence summary:",
+        "Article title: {title}\n\nArticle description: {description}",
     ),
 ])
 
 
-def summarize_article(llm: BaseChatModel, title: str, description: str) -> str:
+def summarize_article(llm: BaseChatModel, title: str, description: str) -> tuple[str, str]:
     """
-    Summarize a single news article using the provided LangChain LLM.
-
-    Args:
-        llm:         A configured LangChain BaseChatModel instance.
-        title:       The article headline.
-        description: The article description or lead paragraph.
+    Summarize a news article using the provided LangChain LLM.
 
     Returns:
-        A 2-3 sentence plain-text summary.
+        A tuple of (summary, why_it_matters) — each a single sentence.
     """
     chain = _PROMPT | llm | StrOutputParser()
-    return chain.invoke({"title": title, "description": description}).strip()
+    raw = chain.invoke({"title": title, "description": description}).strip()
+
+    summary = ""
+    why = ""
+    for line in raw.splitlines():
+        line = line.strip()
+        if line.startswith("SUMMARY:"):
+            summary = line[len("SUMMARY:"):].strip()
+        elif line.startswith("WHY:"):
+            why = line[len("WHY:"):].strip()
+
+    return summary or raw, why
