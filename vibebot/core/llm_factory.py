@@ -9,6 +9,7 @@ def get_llm(provider: str, model: str) -> BaseChatModel:
     Supported providers:
         - "anthropic": uses langchain_anthropic.ChatAnthropic
         - "openai":    uses langchain_openai.ChatOpenAI
+        - "ollama":    uses langchain_ollama.ChatOllama (local, no API key required)
 
     To add a new provider, add a new branch below and install the
     corresponding langchain integration package.
@@ -34,8 +35,12 @@ def get_llm(provider: str, model: str) -> BaseChatModel:
             raise EnvironmentError("OPENAI_API_KEY is not set in the environment.")
         return ChatOpenAI(model=model, api_key=api_key)
 
+    elif provider == "ollama":
+        from langchain_ollama import ChatOllama
+        return ChatOllama(model=model)
+
     else:
         raise ValueError(
             f"Unsupported LLM provider: '{provider}'. "
-            "Supported providers: 'anthropic', 'openai'."
+            "Supported providers: 'anthropic', 'openai', 'ollama'."
         )
