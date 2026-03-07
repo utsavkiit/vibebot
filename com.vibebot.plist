@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  VibeBot launchd agent — runs the daily digest at 9:00 AM.
+
+  NOTE: setup.sh auto-generates the correct version of this file with your
+  actual Python path and repo path filled in. Use setup.sh rather than
+  copying this file manually.
+
+  Manual install:
+    1. Edit ProgramArguments to use your python3 path and repo path.
+    2. cp com.vibebot.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.vibebot.plist
+
+  Useful commands:
+    launchctl start com.vibebot.daily        # trigger immediately
+    launchctl stop com.vibebot.daily         # stop a running job
+    launchctl unload ~/Library/LaunchAgents/com.vibebot.plist  # disable
+    tail -f ~/Library/Logs/vibebot.log       # view logs
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.vibebot.daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Replace with your actual python3 path: $(which python3) -->
+        <string>/usr/bin/python3</string>
+        <!-- Replace with the absolute path to this repo -->
+        <string>/path/to/NewsBot/vibebot/main.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <!-- Replace with the absolute path to this repo -->
+    <string>/path/to/NewsBot</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/YOUR_USERNAME/Library/Logs/vibebot.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USERNAME/Library/Logs/vibebot.log</string>
+</dict>
+</plist>

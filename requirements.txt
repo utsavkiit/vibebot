@@ -1,0 +1,7 @@
+langchain
+langchain-core
+langchain-anthropic      # Claude / Anthropic support
+langchain-openai         # OpenAI support (optional — needed only if provider=openai)
+requests
+python-dotenv
+pyyaml

@@ -1,0 +1,27 @@
+# VibeBot configuration
+# ---------------------------------------------------------------------------
+# LLM settings
+# ---------------------------------------------------------------------------
+llm:
+  # Supported providers: anthropic, openai
+  provider: anthropic
+  # Any model ID supported by the chosen provider
+  model: claude-sonnet-4-6
+
+# ---------------------------------------------------------------------------
+# Plugin settings
+# Set enabled: true to include a plugin in the daily digest.
+# ---------------------------------------------------------------------------
+plugins:
+  news:
+    enabled: true
+    article_count: 5   # How many top headlines to include
+
+  stocks:
+    enabled: false
+    # watchlist: [AAPL, MSFT, TSLA]   # Uncomment when implementing
+
+  real_estate:
+    enabled: false
+    # location: "San Francisco, CA"   # Uncomment when implementing
+    # max_price: 1500000
