@@ -75,7 +75,7 @@ class NewsPlugin(BasePlugin):
         blocks.append({"type": "divider"})
 
         for i, article in enumerate(articles, start=1):
-            summary, why = summarize_article(
+            summary, emoji = summarize_article(
                 llm,
                 title=article["title"],
                 description=article["description"],
@@ -88,7 +88,7 @@ class NewsPlugin(BasePlugin):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*{i}. <{article['url']}|{summary}>*",
+                    "text": f"{emoji} *{i}. <{article['url']}|{summary}>*",
                 },
             }
             if image_url:
@@ -105,13 +105,6 @@ class NewsPlugin(BasePlugin):
                 "elements": [
                     {"type": "mrkdwn", "text": f"📌 {article['source']}  ·  {time_str}"}
                 ],
-            })
-
-            # Why it matters
-            why_text = f"*💡 Why it matters:* {why}" if why else "_No further context._"
-            blocks.append({
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": why_text},
             })
 
             if i < len(articles):
