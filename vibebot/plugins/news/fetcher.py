@@ -1,13 +1,14 @@
-import os
-import requests
+from datetime import datetime, timezone
+from urllib.parse import urlparse
+
+from langchain_tavily import TavilySearch
 
 
 def fetch_top_articles(count: int = 5) -> list[dict]:
     """
-    Fetch the top world news articles from NewsAPI.org.
+    Fetch the top world news articles via Tavily Search.
 
-    Requires NEWS_API_KEY in the environment.
-    Free tier: 100 requests/day. Sign up at https://newsapi.org/register
+    Requires TAVILY_API_KEY in the environment.
 
     Args:
         count: Number of articles to fetch (default: 5).
@@ -16,38 +17,21 @@ def fetch_top_articles(count: int = 5) -> list[dict]:
         List of article dicts with keys:
             title, description, url, source, published_at
     """
-    api_key = os.environ.get("NEWS_API_KEY")
-    if not api_key:
-        raise EnvironmentError("NEWS_API_KEY is not set in the environment.")
-
-    response = requests.get(
-        "https://newsapi.org/v2/top-headlines",
-        params={
-            "category": "general",
-            "language": "en",
-            "pageSize": count,
-            "apiKey": api_key,
-        },
-        timeout=10,
+    tool = TavilySearch(max_results=count)
+    response = tool.invoke(
+        "biggest world news today site:reuters.com OR site:bbc.com OR site:apnews.com OR site:ft.com"
     )
 
-    if response.status_code != 200:
-        raise RuntimeError(
-            f"NewsAPI returned {response.status_code}: {response.text}"
-        )
-
-    data = response.json()
-    if data.get("status") != "ok":
-        raise RuntimeError(f"NewsAPI error: {data.get('message', 'Unknown error')}")
-
     articles = []
-    for item in data.get("articles", [])[:count]:
+    for result in response.get("results", [])[:count]:
+        url = result.get("url") or ""
+        source = urlparse(url).netloc.removeprefix("www.") if url else "Unknown"
         articles.append({
-            "title": item.get("title") or "Untitled",
-            "description": item.get("description") or item.get("content") or "",
-            "url": item.get("url") or "",
-            "source": (item.get("source") or {}).get("name") or "Unknown",
-            "published_at": item.get("publishedAt") or "",
+            "title": result.get("title") or "Untitled",
+            "description": result.get("content") or "",
+            "url": url,
+            "source": source,
+            "published_at": datetime.now(timezone.utc).isoformat(),
         })
 
     return articles
