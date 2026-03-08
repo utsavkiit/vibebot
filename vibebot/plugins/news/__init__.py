@@ -75,7 +75,7 @@ class NewsPlugin(BasePlugin):
         blocks.append({"type": "divider"})
 
         for i, article in enumerate(articles, start=1):
-            summary, emoji = summarize_article(
+            headline, blurb, emoji = summarize_article(
                 llm,
                 title=article["title"],
                 description=article["description"],
@@ -83,13 +83,13 @@ class NewsPlugin(BasePlugin):
             image_url = fetch_og_image(article["url"])
             time_str = _format_published_at(article["published_at"])
 
-            # Headline as clickable link (with optional thumbnail accessory)
+            # Headline as clickable link + blurb (with optional thumbnail accessory)
+            card_text = f"{emoji} *{i}. <{article['url']}|{headline}>*"
+            if blurb:
+                card_text += f"\n{blurb}"
             block_a: dict = {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"{emoji} *{i}. <{article['url']}|{summary}>*",
-                },
+                "text": {"type": "mrkdwn", "text": card_text},
             }
             if image_url:
                 block_a["accessory"] = {
