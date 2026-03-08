@@ -81,12 +81,12 @@ class NewsPlugin(BasePlugin):
             image_url = fetch_og_image(article["url"])
             time_str = _format_published_at(article["published_at"])
 
-            # Headline + summary (with optional thumbnail accessory)
+            # Headline as clickable link (with optional thumbnail accessory)
             block_a: dict = {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*{i}. {article['title']}*\n{summary}",
+                    "text": f"*{i}. <{article['url']}|{summary}>*",
                 },
             }
             if image_url:
@@ -105,16 +105,11 @@ class NewsPlugin(BasePlugin):
                 ],
             })
 
-            # Why it matters + Read button
+            # Why it matters
             why_text = f"*💡 Why it matters:* {why}" if why else "_No further context._"
             blocks.append({
                 "type": "section",
                 "text": {"type": "mrkdwn", "text": why_text},
-                "accessory": {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "Read →", "emoji": False},
-                    "url": article["url"],
-                },
             })
 
             if i < len(articles):
