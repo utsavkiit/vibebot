@@ -20,6 +20,6 @@ delivery:
 ```
 ANTHROPIC_API_KEY=...
 OPENAI_API_KEY=...       # only if provider=openai
-NEWS_API_KEY=...         # newsapi.org free tier, 100 req/day
+TAVILY_API_KEY=...       # tavily.com — used for news search
 SLACK_WEBHOOK_URL=...    # Slack app → Incoming Webhooks
 ```

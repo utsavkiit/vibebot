@@ -37,9 +37,11 @@ class NewsPlugin(BasePlugin):
     def collect(self, conn) -> int:
         """Fetch top headlines and store new ones in raw_items."""
         articles = fetch_top_articles(count=self.article_count)
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         new_count = 0
         for article in articles:
-            external_id = hashlib.md5(article["url"].encode()).hexdigest()
+            # Include date so the same URL can be re-collected on a new day
+            external_id = hashlib.md5(f"{today}:{article['url']}".encode()).hexdigest()
             if insert_raw_item(conn, "news", external_id, article):
                 new_count += 1
         return new_count
@@ -73,7 +75,7 @@ class NewsPlugin(BasePlugin):
         blocks.append({"type": "divider"})
 
         for i, article in enumerate(articles, start=1):
-            summary, why = summarize_article(
+            summary, emoji = summarize_article(
                 llm,
                 title=article["title"],
                 description=article["description"],
@@ -81,12 +83,12 @@ class NewsPlugin(BasePlugin):
             image_url = fetch_og_image(article["url"])
             time_str = _format_published_at(article["published_at"])
 
-            # Headline + summary (with optional thumbnail accessory)
+            # Headline as clickable link (with optional thumbnail accessory)
             block_a: dict = {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*{i}. {article['title']}*\n{summary}",
+                    "text": f"{emoji} *{i}. <{article['url']}|{summary}>*",
                 },
             }
             if image_url:
@@ -103,18 +105,6 @@ class NewsPlugin(BasePlugin):
                 "elements": [
                     {"type": "mrkdwn", "text": f"📌 {article['source']}  ·  {time_str}"}
                 ],
-            })
-
-            # Why it matters + Read button
-            why_text = f"*💡 Why it matters:* {why}" if why else "_No further context._"
-            blocks.append({
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": why_text},
-                "accessory": {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "Read →", "emoji": False},
-                    "url": article["url"],
-                },
             })
 
             if i < len(articles):

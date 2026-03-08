@@ -1,8 +1,11 @@
 langchain
 langchain-core
+langchain-community
+langchain-tavily
 langchain-anthropic      # Claude / Anthropic support
 langchain-openai         # OpenAI support (optional — needed only if provider=openai)
 langchain-ollama         # Ollama support (optional — needed only if provider=ollama)
 requests
+tavily-python
 python-dotenv
 pyyaml
