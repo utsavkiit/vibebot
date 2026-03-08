@@ -8,11 +8,11 @@ _PROMPT = ChatPromptTemplate.from_messages([
         "system",
         "You are a sharp news editor writing for a busy professional audience. "
         "Given a news article, write two things:\n"
-        "1. SUMMARY: Exactly 1 punchy sentence. Lead with the most interesting angle. "
-        "Active voice, no filler phrases, don't start with the article title.\n"
+        "1. HEADLINE: A punchy, newspaper-style headline. Max 8 words. "
+        "Active voice. No fluff. Make it specific and intriguing — not generic.\n"
         "2. WHY: Exactly 1 sentence explaining the broader significance or impact.\n\n"
         "Respond in exactly this format (no extra text):\n"
-        "SUMMARY: <sentence>\n"
+        "HEADLINE: <8 words max>\n"
         "WHY: <sentence>",
     ),
     (
@@ -36,8 +36,8 @@ def summarize_article(llm: BaseChatModel, title: str, description: str) -> tuple
     why = ""
     for line in raw.splitlines():
         line = line.strip()
-        if line.startswith("SUMMARY:"):
-            summary = line[len("SUMMARY:"):].strip()
+        if line.startswith("HEADLINE:"):
+            summary = line[len("HEADLINE:"):].strip()
         elif line.startswith("WHY:"):
             why = line[len("WHY:"):].strip()
 
