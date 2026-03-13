@@ -49,10 +49,10 @@ def init_db(db_path: Path = _DEFAULT_DB_PATH) -> None:
             );
 
             CREATE TABLE IF NOT EXISTS f1_sent_notifications (
-                id                INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_key       TEXT NOT NULL,
-                notification_type TEXT NOT NULL,
-                sent_at           TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_key        TEXT NOT NULL,
+                notification_type  TEXT NOT NULL,
+                sent_at            TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(session_key, notification_type)
             );
         """)
