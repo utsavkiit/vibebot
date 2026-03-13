@@ -17,7 +17,7 @@ def fetch_top_articles(count: int = 5) -> list[dict]:
         List of article dicts with keys:
             title, description, url, source, published_at
     """
-    tool = TavilySearch(max_results=count, topic="news")
+    tool = TavilySearch(max_results=count, topic="news", time_range="day")
     response = tool.invoke(
         "biggest world news today site:reuters.com OR site:bbc.com OR site:apnews.com OR site:ft.com"
     )
