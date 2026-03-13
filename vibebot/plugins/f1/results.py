@@ -60,6 +60,15 @@ def fetch_quali_grid(year: int, round_number: int) -> list[dict]:
     return races[0].get("QualifyingResults", [])
 
 
+def fetch_sprint_quali_grid(session_key: str) -> list[dict]:
+    """
+    Return the sprint qualifying grid ordered by best lap time.
+    Uses the same OpenF1 laps approach as fetch_fp_top_times.
+    Each entry: {driver_number, driver_code, position, lap_duration}
+    """
+    return fetch_fp_top_times(session_key)
+
+
 def fetch_race_result(year: int, round_number: int) -> list[dict]:
     """Return the race result from Jolpica."""
     url = f"{_JOLPICA}/{year}/{round_number}/results.json"

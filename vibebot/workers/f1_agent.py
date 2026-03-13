@@ -28,11 +28,13 @@ from vibebot.plugins.f1.notifier import (
     build_post_sprint_quali_blocks,
     build_pre_race_blocks,
     build_pre_session_blocks,
+    build_pre_sprint_blocks,
 )
 from vibebot.plugins.f1.results import (
     fetch_fp_top_times,
     fetch_quali_grid,
     fetch_race_result,
+    fetch_sprint_quali_grid,
     fetch_sprint_result,
 )
 
@@ -107,6 +109,26 @@ def _job_pre_session(session_dict: dict, cfg: dict) -> None:
     mark_notification_sent(conn, key, "pre_session")
     conn.close()
     log.info("Sent pre_session for session %s", key)
+
+
+def _job_pre_sprint(session_dict: dict, cfg: dict) -> None:
+    conn = get_connection(_DB_PATH)
+    key = session_dict["session_key"]
+    if notification_already_sent(conn, key, "pre_sprint"):
+        conn.close()
+        return
+    # Find the Sprint Qualifying session for the same round to get the grid.
+    row = conn.execute(
+        "SELECT session_key FROM f1_sessions WHERE year=? AND round_number=? AND session_type='Sprint Qualifying'",
+        (session_dict["year"], session_dict["round_number"]),
+    ).fetchone()
+    sq_key = row[0] if row else None
+    grid = fetch_sprint_quali_grid(sq_key) if sq_key else []
+    blocks = build_pre_sprint_blocks(session_dict, grid, display_tz=cfg["display_timezone"])
+    _send_slack(blocks)
+    mark_notification_sent(conn, key, "pre_sprint")
+    conn.close()
+    log.info("Sent pre_sprint for session %s", key)
 
 
 def _job_post_session(session_dict: dict, cfg: dict) -> None:
@@ -212,7 +234,7 @@ def schedule_sessions(scheduler: BlockingScheduler, conn: sqlite3.Connection, cf
                 args=[s, cfg], id=jid, replace_existing=True,
             )
 
-        # Post-session + optional pre-race jobs
+        # Post-session + optional pre-race/pre-sprint jobs
         post_time = end + post_delay
         if post_time > now:
             if s["session_type"] == "Race":
@@ -221,6 +243,14 @@ def schedule_sessions(scheduler: BlockingScheduler, conn: sqlite3.Connection, cf
                     jid = build_job_id(s["session_key"], "pre_race")
                     scheduler.add_job(
                         _job_pre_race, DateTrigger(run_date=pre_race_time),
+                        args=[s, cfg], id=jid, replace_existing=True,
+                    )
+            elif s["session_type"] == "Sprint":
+                pre_sprint_time = start - pre_race_delta
+                if pre_sprint_time > now:
+                    jid = build_job_id(s["session_key"], "pre_sprint")
+                    scheduler.add_job(
+                        _job_pre_sprint, DateTrigger(run_date=pre_sprint_time),
                         args=[s, cfg], id=jid, replace_existing=True,
                     )
             jid = build_job_id(s["session_key"], "post")

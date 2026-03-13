@@ -80,6 +80,29 @@ def build_pre_session_blocks(session: dict, display_tz: str = "US/Eastern") -> l
     ]
 
 
+def build_pre_sprint_blocks(session: dict, grid: list, display_tz: str = "US/Eastern") -> list:
+    """1-hour Sprint Race briefing with sprint qualifying grid."""
+    time_str = _fmt_time(session["start_utc"], display_tz)
+    top8 = []
+    for r in grid[:8]:
+        pos = r.get("position", "?")
+        code = r.get("driver_code", "???")
+        medal = _MEDAL.get(int(pos), f"  {pos}.")
+        top8.append(f"{medal}  *{code}*")
+    grid_text = "\n".join(top8) if top8 else "_Grid not yet available._"
+    return [
+        _header(f"⚡ Sprint Race — {session['event_name']}"),
+        _section(
+            f"*Round {session['round_number']}*  |  📍 {session['circuit']}, {session['country']}\n"
+            f"🕐 Lights out at {time_str}"
+        ),
+        _divider(),
+        _section("*Sprint Grid (Top 8)*\n" + grid_text),
+        _divider(),
+        _section("_Sprint Race begins in ~1 hour. Points for top 8 finishers._"),
+    ]
+
+
 def build_post_fp_blocks(session: dict, results: list, display_tz: str = "US/Eastern") -> list:
     """Post-FP summary with top lap times."""
     emoji = _SESSION_EMOJI.get(session["session_type"], "🔧")

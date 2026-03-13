@@ -46,11 +46,13 @@ from vibebot.plugins.f1.notifier import (
     build_post_sprint_quali_blocks,
     build_pre_race_blocks,
     build_pre_session_blocks,
+    build_pre_sprint_blocks,
 )
 from vibebot.plugins.f1.results import (
     fetch_fp_top_times,
     fetch_quali_grid,
     fetch_race_result,
+    fetch_sprint_quali_grid,
     fetch_sprint_result,
 )
 
@@ -84,6 +86,19 @@ def build_blocks(notification_type: str, session: dict) -> list:
         grid = fetch_quali_grid(year, rnum)
         return build_pre_race_blocks(session, grid, display_tz=_DISPLAY_TZ)
 
+    if notification_type == "pre_sprint":
+        # Find the Sprint Qualifying session_key for the same round
+        init_db(_DB_PATH)
+        conn = get_connection(_DB_PATH)
+        row = conn.execute(
+            "SELECT session_key FROM f1_sessions WHERE year=? AND round_number=? AND session_type='Sprint Qualifying'",
+            (year, rnum),
+        ).fetchone()
+        conn.close()
+        sq_key = row[0] if row else None
+        grid = fetch_sprint_quali_grid(sq_key) if sq_key else []
+        return build_pre_sprint_blocks(session, grid, display_tz=_DISPLAY_TZ)
+
     if notification_type == "post_fp":
         results = fetch_fp_top_times(key)
         return build_post_fp_blocks(session, results, display_tz=_DISPLAY_TZ)
@@ -110,6 +125,7 @@ def build_blocks(notification_type: str, session: dict) -> list:
 _SESSION_TYPE_FOR_NOTIF = {
     "pre_session": None,          # any session
     "pre_race": "Race",
+    "pre_sprint": "Sprint",
     "post_fp": "Practice 1",      # use FP1 as representative
     "post_quali": "Qualifying",
     "post_sprint_quali": "Sprint Qualifying",
