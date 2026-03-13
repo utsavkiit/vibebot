@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -13,9 +14,12 @@ from vibebot.core.db import (
     mark_raw_item_processed,
 )
 from vibebot.core.message_utils import build_footer, build_header
-from vibebot.plugins.news.fetcher import fetch_top_articles
+from vibebot.plugins.news.clusterer import cluster_and_rank, pick_best_article
+from vibebot.plugins.news.fetcher import fetch_all_articles, resolve_article_url
 from vibebot.plugins.news.og_image import fetch_og_image
-from vibebot.plugins.news.summarizer import summarize_article
+from vibebot.plugins.news.summarizer import summarize_cluster
+
+logger = logging.getLogger(__name__)
 
 
 def _format_published_at(iso_str: str) -> str:
@@ -25,34 +29,41 @@ def _format_published_at(iso_str: str) -> str:
 
 class NewsPlugin(BasePlugin):
     """
-    Fetches top world news headlines, summarizes each with an LLM,
-    and builds a Slack Block Kit digest message.
+    Fetches ~80 news articles from Google News RSS across multiple categories,
+    clusters them by semantic similarity, and builds a Slack digest from the
+    top 5 story clusters — each represented by a catchy headline, summary,
+    and a link to the best no-paywall source.
     """
 
     name = "news"
 
-    def __init__(self, article_count: int = 5) -> None:
-        self.article_count = article_count
+    def __init__(self, article_count: int = 80, top_clusters: int = 5) -> None:
+        self.article_count = article_count  # kept for config compatibility
+        self.top_clusters = top_clusters
 
     def collect(self, conn) -> int:
-        """Fetch top headlines and store new ones in raw_items."""
-        articles = fetch_top_articles(count=self.article_count)
+        """Fetch articles from Google News RSS and store new ones in raw_items."""
+        articles = fetch_all_articles()
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         new_count = 0
         for article in articles:
-            # Include date so the same URL can be re-collected on a new day
             external_id = hashlib.md5(f"{today}:{article['url']}".encode()).hexdigest()
             if insert_raw_item(conn, "news", external_id, article):
                 new_count += 1
         return new_count
 
     def build_digest(self, conn, llm: BaseChatModel) -> Optional[int]:
-        """Build a Slack digest from pending news items and queue it for delivery."""
+        """Cluster pending articles, pick top 5 stories, build a Slack digest."""
         items = get_pending_raw_items(conn, "news")
         if not items:
             return None
+
         articles = [json.loads(item["payload"]) for item in items]
-        blocks = build_header() + self._build_blocks(llm, articles) + build_footer()
+        top_clusters = cluster_and_rank(articles, top_k=self.top_clusters)
+        if not top_clusters:
+            return None
+
+        blocks = build_header() + self._build_cluster_blocks(llm, top_clusters) + build_footer()
         msg_id = insert_outbound_message(
             conn,
             channel="slack_default",
@@ -64,50 +75,45 @@ class NewsPlugin(BasePlugin):
             mark_raw_item_processed(conn, item["id"])
         return msg_id
 
-    def _build_blocks(self, llm: BaseChatModel, articles: list) -> list[dict]:
-        """Build per-article Slack blocks for the news section."""
-        blocks: list[dict] = []
+    def _build_cluster_blocks(self, llm: BaseChatModel, clusters: list[list[dict]]) -> list[dict]:
+        blocks: list[dict] = [
+            {"type": "section", "text": {"type": "mrkdwn", "text": "*📰 Top Stories*"}},
+            {"type": "divider"},
+        ]
 
-        blocks.append({
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": "*📰 Top Stories*"},
-        })
-        blocks.append({"type": "divider"})
+        for i, cluster_articles in enumerate(clusters, start=1):
+            best = pick_best_article(cluster_articles)
 
-        for i, article in enumerate(articles, start=1):
-            headline, blurb, emoji = summarize_article(
-                llm,
-                title=article["title"],
-                description=article["description"],
-            )
-            image_url = fetch_og_image(article["url"])
-            time_str = _format_published_at(article["published_at"])
+            # Resolve Google News redirect → actual article URL
+            actual_url = resolve_article_url(best["url"])
 
-            # Headline as clickable link + blurb (with optional thumbnail accessory)
-            card_text = f"{emoji} *{i}. <{article['url']}|{headline}>*"
+            headline, blurb, emoji = summarize_cluster(llm, cluster_articles)
+            image_url = fetch_og_image(actual_url)
+            time_str = _format_published_at(best["published_at"])
+            related = len(cluster_articles)
+
+            card_text = f"{emoji} *{i}. <{actual_url}|{headline}>*"
             if blurb:
                 card_text += f"\n{blurb}"
-            block_a: dict = {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": card_text},
-            }
+
+            card_block: dict = {"type": "section", "text": {"type": "mrkdwn", "text": card_text}}
             if image_url:
-                block_a["accessory"] = {
+                card_block["accessory"] = {
                     "type": "image",
                     "image_url": image_url,
-                    "alt_text": article["title"],
+                    "alt_text": headline,
                 }
-            blocks.append(block_a)
+            blocks.append(card_block)
 
-            # Source + publish time
+            buzz = f"  ·  {related} related articles" if related > 1 else ""
             blocks.append({
                 "type": "context",
                 "elements": [
-                    {"type": "mrkdwn", "text": f"📌 {article['source']}  ·  {time_str}"}
+                    {"type": "mrkdwn", "text": f"📌 {best['source']}  ·  {time_str}{buzz}"}
                 ],
             })
 
-            if i < len(articles):
+            if i < len(clusters):
                 blocks.append({"type": "divider"})
 
         return blocks

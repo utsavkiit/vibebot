@@ -27,7 +27,10 @@ def run_pipeline(config: dict) -> None:
             log.info("Plugin '%s' is disabled — skipping.", name)
             continue
         if name == "news":
-            plugins.append(NewsPlugin(article_count=cfg.get("article_count", 5)))
+            plugins.append(NewsPlugin(
+                article_count=cfg.get("article_count", 80),
+                top_clusters=cfg.get("top_clusters", 5),
+            ))
         else:
             log.warning("Plugin '%s' is enabled but not registered — skipping.", name)
 

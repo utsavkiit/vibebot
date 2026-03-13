@@ -9,3 +9,7 @@ requests
 tavily-python
 python-dotenv
 pyyaml
+feedparser               # Google News RSS parsing
+sentence-transformers    # Semantic embeddings for article clustering
+scikit-learn             # K-means clustering
+numpy                    # Required by sentence-transformers and scikit-learn

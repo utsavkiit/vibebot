@@ -15,7 +15,8 @@ llm:
 plugins:
   news:
     enabled: true
-    article_count: 5   # How many top headlines to include
+    article_count: 80  # Target total articles to collect from RSS feeds
+    top_clusters: 5    # Number of story clusters to include in the digest
 
   stocks:
     enabled: false
