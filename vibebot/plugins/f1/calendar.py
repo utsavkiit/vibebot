@@ -40,7 +40,7 @@ def fetch_and_store_calendar(conn: sqlite3.Connection, year: int) -> int:
                     f"{s.get('country_name', '')} Grand Prix",
                     s.get("circuit_short_name", ""),
                     s.get("country_name", ""),
-                    s.get("session_type", ""),
+                    s.get("session_name") or s.get("session_type", ""),
                     s.get("date_start", ""),
                     s.get("date_end", ""),
                 ),
