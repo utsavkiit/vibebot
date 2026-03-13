@@ -5,3 +5,4 @@ langchain-openai         # OpenAI support (optional — needed only if provider=
 requests
 python-dotenv
 pyyaml
+APScheduler>=3.10,<4

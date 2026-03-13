@@ -26,6 +26,14 @@ plugins:
     # location: "San Francisco, CA"   # Uncomment when implementing
     # max_price: 1500000
 
+  f1:
+    enabled: true
+    display_timezone: "US/Eastern"
+    pre_session_minutes: 30
+    pre_race_minutes: 60
+    post_session_delay_minutes: 45
+    calendar_refresh_hours: 24
+
 # ---------------------------------------------------------------------------
 # Delivery settings
 # ---------------------------------------------------------------------------
