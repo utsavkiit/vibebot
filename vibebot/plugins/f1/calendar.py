@@ -37,7 +37,7 @@ def fetch_and_store_calendar(conn: sqlite3.Connection, year: int) -> int:
                     session_key,
                     s["year"],
                     round_number,
-                    s.get("meeting_name", ""),
+                    f"{s.get('country_name', '')} Grand Prix",
                     s.get("circuit_short_name", ""),
                     s.get("country_name", ""),
                     s.get("session_type", ""),
