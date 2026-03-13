@@ -16,6 +16,28 @@ _SESSION_EMOJI = {
     "Race": "🏁",
 }
 
+# Human-friendly label used in message headers.
+_SESSION_LABEL = {
+    "Practice 1": "Free Practice 1",
+    "Practice 2": "Free Practice 2",
+    "Practice 3": "Free Practice 3",
+    "Qualifying": "Qualifying",
+    "Sprint Qualifying": "Sprint Shoot-out",
+    "Sprint": "Sprint Race",
+    "Race": "Grand Prix Race",
+}
+
+# One-line description added to pre-session messages so the context is obvious.
+_SESSION_DESCRIPTION = {
+    "Practice 1": "Free practice — no championship points.",
+    "Practice 2": "Free practice — no championship points.",
+    "Practice 3": "Free practice — no championship points.",
+    "Qualifying": "Sets the starting grid for Sunday's Grand Prix.",
+    "Sprint Qualifying": "Sets the grid for Saturday's Sprint Race.",
+    "Sprint": "Short race — championship points for top 8 finishers.",
+    "Race": "Full Grand Prix — championship points awarded to top 10.",
+}
+
 _MEDAL = {1: "🥇", 2: "🥈", 3: "🥉"}
 
 
@@ -40,17 +62,21 @@ def _divider() -> dict:
 
 def build_pre_session_blocks(session: dict, display_tz: str = "US/Eastern") -> list:
     """30-minute warning before any session."""
-    emoji = _SESSION_EMOJI.get(session["session_type"], "🏎️")
+    session_type = session["session_type"]
+    emoji = _SESSION_EMOJI.get(session_type, "🏎️")
+    label = _SESSION_LABEL.get(session_type, session_type)
+    desc = _SESSION_DESCRIPTION.get(session_type, "")
     time_str = _fmt_time(session["start_utc"], display_tz)
+    desc_line = f"_{desc}_\n" if desc else ""
     return [
-        _header(f"{emoji} {session['session_type']} — Starting Soon"),
+        _header(f"{emoji} {label} — Starting Soon"),
         _section(
             f"*{session['event_name']}*  |  Round {session['round_number']}\n"
             f"📍 {session['circuit']}, {session['country']}\n"
             f"🕐 {time_str}"
         ),
         _divider(),
-        _section("_Session begins in ~30 minutes._"),
+        _section(f"{desc_line}_Session begins in ~30 minutes._"),
     ]
 
 

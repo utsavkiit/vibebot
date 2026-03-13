@@ -31,7 +31,36 @@ def test_pre_session_blocks_structure():
 
 def test_pre_session_blocks_contains_session_name():
     blocks = build_pre_session_blocks(SESSION, display_tz="US/Eastern")
-    assert _has_text(blocks, "Practice 1")
+    # "Free Practice 1" is the descriptive label used in the header.
+    assert _has_text(blocks, "Free Practice 1")
+
+def test_pre_session_blocks_contains_description():
+    blocks = build_pre_session_blocks(SESSION, display_tz="US/Eastern")
+    assert _has_text(blocks, "no championship points")
+
+def test_pre_session_blocks_race_label():
+    race_session = {**SESSION, "session_type": "Race"}
+    blocks = build_pre_session_blocks(race_session, display_tz="US/Eastern")
+    assert _has_text(blocks, "Grand Prix Race")
+    assert _has_text(blocks, "championship points")
+
+def test_pre_session_blocks_quali_label():
+    quali_session = {**SESSION, "session_type": "Qualifying"}
+    blocks = build_pre_session_blocks(quali_session, display_tz="US/Eastern")
+    assert _has_text(blocks, "Qualifying")
+    assert _has_text(blocks, "starting grid")
+
+def test_pre_session_blocks_sprint_label():
+    sprint_session = {**SESSION, "session_type": "Sprint"}
+    blocks = build_pre_session_blocks(sprint_session, display_tz="US/Eastern")
+    assert _has_text(blocks, "Sprint Race")
+    assert _has_text(blocks, "top 8 finishers")
+
+def test_pre_session_blocks_sprint_quali_label():
+    sq_session = {**SESSION, "session_type": "Sprint Qualifying"}
+    blocks = build_pre_session_blocks(sq_session, display_tz="US/Eastern")
+    assert _has_text(blocks, "Sprint Shoot-out")
+    assert _has_text(blocks, "Sprint Race")
 
 def test_pre_session_blocks_contains_event():
     blocks = build_pre_session_blocks(SESSION, display_tz="US/Eastern")
