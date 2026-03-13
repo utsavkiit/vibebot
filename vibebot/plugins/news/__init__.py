@@ -37,11 +37,9 @@ class NewsPlugin(BasePlugin):
     def collect(self, conn) -> int:
         """Fetch top headlines and store new ones in raw_items."""
         articles = fetch_top_articles(count=self.article_count)
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         new_count = 0
         for article in articles:
-            # Include date so the same URL can be re-collected on a new day
-            external_id = hashlib.md5(f"{today}:{article['url']}".encode()).hexdigest()
+            external_id = hashlib.md5(article["url"].encode()).hexdigest()
             if insert_raw_item(conn, "news", external_id, article):
                 new_count += 1
         return new_count
