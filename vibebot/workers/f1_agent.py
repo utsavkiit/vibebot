@@ -250,8 +250,10 @@ def run_f1_agent(config: dict) -> None:
     schedule_sessions(scheduler, conn, f1_cfg)
 
     def _refresh():
-        fetch_and_store_calendar(conn, _YEAR)
-        schedule_sessions(scheduler, conn, f1_cfg)
+        refresh_conn = get_connection(_DB_PATH)
+        fetch_and_store_calendar(refresh_conn, _YEAR)
+        schedule_sessions(scheduler, refresh_conn, f1_cfg)
+        refresh_conn.close()
 
     scheduler.add_job(_refresh, "interval", hours=refresh_hours, id="calendar_refresh")
 
@@ -260,6 +262,7 @@ def run_f1_agent(config: dict) -> None:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         log.info("F1 agent stopped.")
+    finally:
         conn.close()
 
 
