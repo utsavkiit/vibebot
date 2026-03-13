@@ -4,6 +4,8 @@ from vibebot.plugins.f1.notifier import (
     build_pre_session_blocks,
     build_post_fp_blocks,
     build_post_quali_blocks,
+    build_post_sprint_quali_blocks,
+    build_post_sprint_blocks,
     build_pre_race_blocks,
     build_post_race_blocks,
 )
@@ -76,3 +78,26 @@ def test_post_race_blocks_structure():
     assert isinstance(blocks, list)
     assert _has_text(blocks, "VER")
     assert _has_text(blocks, "Bahrain")
+
+def test_post_sprint_quali_blocks_structure():
+    grid = [
+        {"position": "1", "Driver": {"code": "VER"}, "Constructor": {"name": "Red Bull"}, "Q2": "1:05.123"},
+        {"position": "2", "Driver": {"code": "LEC"}, "Constructor": {"name": "Ferrari"}, "Q2": "1:05.456"},
+    ]
+    blocks = build_post_sprint_quali_blocks(SESSION, grid, display_tz="US/Eastern")
+    assert isinstance(blocks, list)
+    assert _has_text(blocks, "VER")
+    assert _has_text(blocks, "Sprint Qualifying")
+
+
+def test_post_sprint_blocks_structure():
+    results = [
+        {"position": "1", "Driver": {"code": "VER"}, "Constructor": {"name": "Red Bull"},
+         "Time": {"time": "25:01.234"}},
+        {"position": "2", "Driver": {"code": "LEC"}, "Constructor": {"name": "Ferrari"},
+         "Time": {"time": "+5.678"}},
+    ]
+    blocks = build_post_sprint_blocks(SESSION, results, display_tz="US/Eastern")
+    assert isinstance(blocks, list)
+    assert _has_text(blocks, "VER")
+    assert _has_text(blocks, "Sprint Race Result")
