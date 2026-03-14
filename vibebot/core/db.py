@@ -33,6 +33,28 @@ def init_db(db_path: Path = _DEFAULT_DB_PATH) -> None:
                 sent_at      TIMESTAMP,
                 last_error   TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS f1_sessions (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_key  TEXT NOT NULL UNIQUE,
+                year         INTEGER NOT NULL,
+                round_number INTEGER NOT NULL,
+                event_name   TEXT NOT NULL,
+                circuit      TEXT NOT NULL,
+                country      TEXT NOT NULL,
+                session_type TEXT NOT NULL,
+                start_utc    TEXT NOT NULL,
+                end_utc      TEXT,
+                last_updated TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS f1_sent_notifications (
+                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_key        TEXT NOT NULL,
+                notification_type  TEXT NOT NULL,
+                sent_at            TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(session_key, notification_type)
+            );
         """)
 
 
