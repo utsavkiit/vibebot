@@ -10,7 +10,7 @@
     <array>
         <string>/usr/bin/python3</string>
         <string>-m</string>
-        <string>vibebot.workers.f1_agent</string>
+        <string>vibebot.workers.f1_check</string>
     </array>
 
     <key>WorkingDirectory</key>
@@ -22,11 +22,8 @@
         <string>/Users/utsavmehta/PersonalProjects/VibeBot</string>
     </dict>
 
-    <key>KeepAlive</key>
-    <true/>
-
-    <key>RunAtLoad</key>
-    <true/>
+    <key>StartInterval</key>
+    <integer>300</integer>
 
     <key>StandardOutPath</key>
     <string>/tmp/vibebot_f1.log</string>
