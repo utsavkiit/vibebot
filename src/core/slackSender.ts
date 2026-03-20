@@ -1,8 +1,8 @@
 export class SlackSender {
   private webhookUrl: string;
 
-  constructor() {
-    const url = process.env.SLACK_WEBHOOK_URL;
+  constructor(webhookUrl?: string) {
+    const url = webhookUrl ?? process.env.SLACK_WEBHOOK_URL;
     if (!url) throw new Error('SLACK_WEBHOOK_URL is not set in the environment.');
     this.webhookUrl = url;
   }

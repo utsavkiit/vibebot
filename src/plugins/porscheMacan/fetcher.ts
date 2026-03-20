@@ -17,18 +17,7 @@ export interface Listing {
 interface AutoDevItem {
   vehicle?: Record<string, unknown>;
   retailListing?: Record<string, unknown>;
-  dealer?: Record<string, unknown>;
   vin?: string;
-  year?: unknown;
-  make?: string;
-  model?: string;
-  trim?: string;
-  price?: unknown;
-  mileage?: unknown;
-  dealerName?: string;
-  dealerCity?: string;
-  dealerState?: string;
-  url?: string;
 }
 
 interface AutoDevResponse {
@@ -50,7 +39,7 @@ export async function fetchMacanListings(
     'vehicle.make': 'Porsche',
     'vehicle.model': 'Macan',
     'vehicle.year': `${yearMin}-${yearMax}`,
-    'vehicle.mileage': `1-${maxMileage}`,
+    'retailListing.miles': `1-${maxMileage}`,
     'retailListing.price': `1-${maxPrice}`,
     zip: zipCode,
     distance: String(distance),
@@ -70,25 +59,24 @@ export async function fetchMacanListings(
   const listings: Listing[] = [];
 
   for (const item of raw) {
-    const vehicle = (item.vehicle ?? item) as Record<string, unknown>;
-    const retail = (item.retailListing ?? item) as Record<string, unknown>;
-    const dealer = (item.dealer ?? {}) as Record<string, unknown>;
+    const vehicle = (item.vehicle ?? {}) as Record<string, unknown>;
+    const retail = (item.retailListing ?? {}) as Record<string, unknown>;
 
     const vin = String(vehicle['vin'] ?? item.vin ?? '');
     if (!vin) continue;
 
     listings.push({
       vin,
-      year: Number(vehicle['year'] ?? item.year ?? 0),
-      make: String(vehicle['make'] ?? item.make ?? 'Porsche'),
-      model: String(vehicle['model'] ?? item.model ?? 'Macan'),
-      trim: String(vehicle['trim'] ?? item.trim ?? ''),
-      price: Number(retail['price'] ?? item.price ?? 0),
-      mileage: Number(vehicle['mileage'] ?? item.mileage ?? 0),
-      dealerName: String(dealer['name'] ?? item.dealerName ?? 'Unknown Dealer'),
-      dealerCity: String(dealer['city'] ?? item.dealerCity ?? ''),
-      dealerState: String(dealer['state'] ?? item.dealerState ?? ''),
-      url: String(retail['url'] ?? item.url ?? ''),
+      year: Number(vehicle['year'] ?? 0),
+      make: String(vehicle['make'] ?? 'Porsche'),
+      model: String(vehicle['model'] ?? 'Macan'),
+      trim: String(vehicle['series'] ?? vehicle['trim'] ?? ''),
+      price: Number(retail['price'] ?? 0),
+      mileage: Number(retail['miles'] ?? 0),
+      dealerName: String(retail['dealer'] ?? 'Unknown Dealer'),
+      dealerCity: '',
+      dealerState: '',
+      url: String(retail['vdp'] ?? retail['url'] ?? ''),
     });
   }
 

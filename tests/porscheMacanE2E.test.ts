@@ -110,6 +110,7 @@ beforeEach(() => {
   db = getConnection(dbPath);
   sentPayloads.length = 0;
   vi.clearAllMocks();
+  vi.stubEnv('SLACK_WEBHOOK_URL_PORSCHE_MACAN', 'https://hooks.slack.com/test/porsche');
   vi.mocked(fetchMacanListings).mockResolvedValue(FAKE_LISTINGS);
   vi.mocked(generateBuyersNote).mockResolvedValue('Excellent sport-trim value for this mileage.');
 });
@@ -117,6 +118,7 @@ beforeEach(() => {
 afterEach(() => {
   db.close();
   if (existsSync(dbPath)) unlinkSync(dbPath);
+  vi.unstubAllEnvs();
 });
 
 // ---------------------------------------------------------------------------

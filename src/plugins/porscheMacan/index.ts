@@ -56,7 +56,7 @@ export class PorscheMacanPlugin extends BasePlugin {
     const topListings = rankListings(allListings, this.listingCount);
     const blocks = [...buildHeader(), ...(await this.buildBlocks(llm, topListings)), ...buildFooter()];
 
-    const msgId = insertOutboundMessage(db, 'slack_default', 'porsche_macan_digest', blocks, 3);
+    const msgId = insertOutboundMessage(db, 'porsche_macan', 'porsche_macan_digest', blocks, 3);
     for (const item of items) {
       markRawItemProcessed(db, item.id);
     }
