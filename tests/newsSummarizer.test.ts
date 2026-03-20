@@ -3,11 +3,12 @@ import { summarizeArticle } from '../src/plugins/news/summarizer';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 function makeMockLlm(response: string): BaseChatModel {
-  // Minimal mock that satisfies the pipe().pipe().invoke() chain
-  const parser = { invoke: async (text: string) => text };
-  const withParser = { invoke: async (input: unknown) => response, pipe: () => parser };
+  // LangChain identifies Runnables via `lc_runnable: true` (isRunnableInterface check).
+  // The sequence then calls invoke(), which must return { content: string } so that
+  // StringOutputParser can extract the text.
   return {
-    pipe: () => withParser,
+    lc_runnable: true,
+    invoke: async (_input: unknown) => ({ content: response }),
   } as unknown as BaseChatModel;
 }
 
