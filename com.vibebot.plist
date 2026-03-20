@@ -16,9 +16,8 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
-        <string>-m</string>
-        <string>vibebot.main</string>
+        <string>/usr/local/bin/node</string>
+        <string>/Users/utsavmehta/PersonalProjects/VibeBot/dist/main.js</string>
     </array>
 
     <key>WorkingDirectory</key>
