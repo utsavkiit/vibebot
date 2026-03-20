@@ -2,14 +2,27 @@ import path from 'path';
 import { getConnection, initDb } from '../core/db';
 import { getLlm } from '../core/llmFactory';
 import { NewsPlugin } from '../plugins/news';
+import { PorscheMacanPlugin } from '../plugins/porscheMacan';
 import * as collector from './collector';
 import * as digestBuilder from './digestBuilder';
 import * as deliveryWorker from './deliveryWorker';
 
 const DB_PATH = path.resolve(__dirname, '../../vibebot.db');
 
+interface PluginConfig {
+  enabled?: boolean;
+  article_count?: number;
+  zip?: string;
+  distance_miles?: number;
+  year_min?: number;
+  year_max?: number;
+  max_price?: number;
+  max_mileage?: number;
+  listing_count?: number;
+}
+
 interface Config {
-  plugins?: Record<string, { enabled?: boolean; article_count?: number }>;
+  plugins?: Record<string, PluginConfig>;
   llm?: { provider?: string; model?: string };
   delivery?: { max_retries?: number };
 }
@@ -29,6 +42,18 @@ export async function runPipeline(config: Config): Promise<void> {
     }
     if (name === 'news') {
       plugins.push(new NewsPlugin(cfg.article_count ?? 5));
+    } else if (name === 'porsche_macan') {
+      plugins.push(
+        new PorscheMacanPlugin(
+          cfg.zip ?? '29715',
+          cfg.distance_miles ?? 50,
+          cfg.year_min ?? 2022,
+          cfg.year_max ?? 2026,
+          cfg.max_price ?? 55000,
+          cfg.max_mileage ?? 25000,
+          cfg.listing_count ?? 5,
+        ),
+      );
     } else {
       console.warn(`Plugin '${name}' is enabled but not registered — skipping.`);
     }
