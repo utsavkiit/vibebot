@@ -26,6 +26,16 @@ plugins:
     # location: "San Francisco, CA"   # Uncomment when implementing
     # max_price: 1500000
 
+  porsche_macan:
+    enabled: true
+    zip: "29715"          # Fort Mill, SC
+    distance_miles: 50
+    year_min: 2022
+    year_max: 2026
+    max_price: 55000
+    max_mileage: 25000
+    listing_count: 5      # Top picks to include in the digest
+
 # ---------------------------------------------------------------------------
 # Delivery settings
 # ---------------------------------------------------------------------------

@@ -46,7 +46,7 @@ export class NewsPlugin extends BasePlugin {
     const articles: Article[] = items.map((item) => JSON.parse(item.payload) as Article);
     const blocks = [...buildHeader(), ...(await this.buildBlocks(llm, articles)), ...buildFooter()];
 
-    const msgId = insertOutboundMessage(db, 'slack_default', 'news_digest', blocks, 3);
+    const msgId = insertOutboundMessage(db, 'news', 'news_digest', blocks, 3);
     for (const item of items) {
       markRawItemProcessed(db, item.id);
     }

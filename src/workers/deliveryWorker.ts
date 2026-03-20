@@ -19,13 +19,25 @@ export async function run(db: Database.Database): Promise<void> {
   }
 }
 
+const CHANNEL_ENV_VARS: Record<string, string> = {
+  news: 'SLACK_WEBHOOK_URL_NEWS',
+  porsche_macan: 'SLACK_WEBHOOK_URL_PORSCHE_MACAN',
+};
+
+function resolveWebhookUrl(channel: string): string {
+  const envVar = CHANNEL_ENV_VARS[channel];
+  const url = (envVar && process.env[envVar]) || process.env.SLACK_WEBHOOK_URL;
+  if (!url) throw new Error(`No Slack webhook URL configured for channel "${channel}".`);
+  return url;
+}
+
 async function deliverWithRetry(db: Database.Database, msg: OutboundMessage): Promise<void> {
   const maxRetries = msg.max_retries;
   let lastError = '';
 
   for (let attempt = msg.retry_count; attempt < maxRetries; attempt++) {
     try {
-      await new SlackSender().send(JSON.parse(msg.payload));
+      await new SlackSender(resolveWebhookUrl(msg.channel)).send(JSON.parse(msg.payload));
       markMessageSent(db, msg.id);
       console.info(`Delivered message id=${msg.id} (${msg.message_type}) on attempt ${attempt + 1}.`);
       return;
