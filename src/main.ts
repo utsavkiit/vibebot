@@ -35,8 +35,12 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  const pluginArgIdx = process.argv.indexOf('--plugin');
+  const pluginFilter = pluginArgIdx !== -1 ? process.argv[pluginArgIdx + 1] : undefined;
+  if (pluginFilter) console.info(`Plugin filter active: running only '${pluginFilter}'.`);
+
   const config = loadConfig(configPath);
-  await runPipeline(config as Parameters<typeof runPipeline>[0]);
+  await runPipeline(config as Parameters<typeof runPipeline>[0], pluginFilter);
   console.info('VibeBot pipeline complete.');
 }
 

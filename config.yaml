@@ -13,28 +13,76 @@ llm:
 # Set enabled: true to include a plugin in the daily digest.
 # ---------------------------------------------------------------------------
 plugins:
+  # --- Legacy plugins (disabled) ---
   news:
-    enabled: true
-    article_count: 5   # How many top headlines to include
+    enabled: false
+    article_count: 5
 
   stocks:
     enabled: false
-    # watchlist: [AAPL, MSFT, TSLA]   # Uncomment when implementing
 
   real_estate:
     enabled: false
-    # location: "San Francisco, CA"   # Uncomment when implementing
-    # max_price: 1500000
 
   gnews:
-    enabled: true
+    enabled: false
     article_count: 50
-    feed_url: "https://news.google.com/rss"   # Top stories; use /rss/topics/<id> for categories
+    feed_url: "https://news.google.com/rss"
     embeddings:
-      provider: ollama           # ollama | openai
-      model: "nomic-embed-text"  # ollama: pull with `ollama pull nomic-embed-text`
-      # provider: openai
-      # model: text-embedding-3-small   # requires OPENAI_API_KEY in .env
+      provider: ollama
+      model: "nomic-embed-text"
+
+  # --- Topic digest plugins (staggered hourly via launchd --plugin flag) ---
+  us_news:
+    enabled: true
+    feed_url: "https://news.google.com/rss/search?q=US+news&hl=en-US&gl=US&ceid=US:en"
+    story_count: 3
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
+
+  world_news:
+    enabled: true
+    feed_url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pXVGlnQVAB"
+    story_count: 3
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
+
+  india_news:
+    enabled: true
+    feed_url: "https://news.google.com/rss/search?q=India+news&hl=en-IN&gl=IN&ceid=IN:en"
+    story_count: 3
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
+
+  sports:
+    enabled: true
+    feeds:
+      f1: "https://news.google.com/rss/search?q=formula+1+f1+racing&hl=en-US&gl=US&ceid=US:en"
+      soccer: "https://news.google.com/rss/search?q=soccer+football+premier+league&hl=en-US&gl=US&ceid=US:en"
+      cricket: "https://news.google.com/rss/search?q=cricket+test+IPL&hl=en-US&gl=US&ceid=US:en"
+      tennis: "https://news.google.com/rss/search?q=tennis+ATP+WTA&hl=en-US&gl=US&ceid=US:en"
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
+
+  tech_news:
+    enabled: true
+    feed_url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pUVGlnQVAB"
+    story_count: 3
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
+
+  stocks_news:
+    enabled: true
+    feed_url: "https://news.google.com/rss/search?q=US+stock+market+NYSE+NASDAQ&hl=en-US&gl=US&ceid=US:en"
+    story_count: 3
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
 
 # ---------------------------------------------------------------------------
 # Delivery settings
