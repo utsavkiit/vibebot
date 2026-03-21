@@ -38,7 +38,7 @@ export class GNewsFetcher {
     }
 
     const embedder = getEmbedder(this.config.embeddings);
-    const texts = headlines.map((h) => `${h.title} — ${h.source}`);
+    const texts = headlines.map((h) => h.description || `${h.title} — ${h.source}`);
 
     // Embed in chunks to avoid timeouts with local models
     const vectors: number[][] = [];
