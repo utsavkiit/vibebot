@@ -70,7 +70,7 @@ plugins:
 
   tech_news:
     enabled: true
-    feed_url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pUVGlnQVAB"
+    feed_url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
     story_count: 3
     embeddings:
       provider: ollama
