@@ -84,6 +84,20 @@ plugins:
       provider: ollama
       model: "nomic-embed-text"
 
+  podcast:
+    enabled: true
+    tts_url: "http://localhost:8080"
+    voice: "af_heart"
+    model: "mlx-community/Kokoro-82M-bf16"
+    output_dir: "~/VibeBot-Podcasts"
+    digest_types:
+      - us_news_digest
+      - world_news_digest
+      - india_news_digest
+      - sports_digest
+      - tech_news_digest
+      - stocks_news_digest
+
 # ---------------------------------------------------------------------------
 # Delivery settings
 # ---------------------------------------------------------------------------
