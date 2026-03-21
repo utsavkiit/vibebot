@@ -37,6 +37,7 @@ interface SportsPluginConfig {
 interface PodcastPluginConfig {
   enabled?: boolean;
   tts_url?: string;
+  serve_url?: string;
   voice?: string;
   model?: string;
   output_dir?: string;
@@ -88,6 +89,7 @@ export async function runPipeline(config: Config, pluginFilter?: string): Promis
         voice: podcastCfg.voice ?? 'af_heart',
         model: podcastCfg.model ?? 'mlx-community/Kokoro-82M-bf16',
         outputDir: podcastCfg.output_dir ?? '~/VibeBot-Podcasts',
+        serveUrl: podcastCfg.serve_url ?? 'http://localhost:8888',
         digestTypes: podcastCfg.digest_types ?? [
           'us_news_digest', 'world_news_digest', 'india_news_digest',
           'sports_digest', 'tech_news_digest', 'stocks_news_digest',

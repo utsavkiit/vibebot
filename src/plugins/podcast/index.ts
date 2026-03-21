@@ -18,6 +18,7 @@ export interface PodcastPluginConfig {
   voice: string;
   model: string;
   outputDir: string;
+  serveUrl: string;
   digestTypes: string[];
 }
 
@@ -116,7 +117,10 @@ export class PodcastPlugin extends BasePlugin {
       console.warn(`[podcast] TTS failed — will post script-only notification. Error: ${(err as Error).message}`);
     }
 
-    const blocks = this.buildSlackBlocks(date, audioPath, script, sections.length);
+    const audioUrl = audioPath
+      ? `${this.config.serveUrl}/${new Date().toISOString().split('T')[0]}.mp3`
+      : null;
+    const blocks = this.buildSlackBlocks(date, audioUrl, script, sections.length);
     const msgId = insertOutboundMessage(db, 'slack_default', 'podcast_digest', blocks, 3);
     markRawItemProcessed(db, item.id);
     return msgId;
@@ -124,7 +128,7 @@ export class PodcastPlugin extends BasePlugin {
 
   private buildSlackBlocks(
     date: string,
-    audioPath: string | null,
+    audioUrl: string | null,
     script: string,
     sectionCount: number,
   ): object[] {
@@ -141,12 +145,12 @@ export class PodcastPlugin extends BasePlugin {
       { type: 'divider' },
     ];
 
-    if (audioPath) {
+    if (audioUrl) {
       blocks.push({
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `✅ *Podcast ready!* Covering ${sectionCount} topics.\n📁 \`${audioPath}\``,
+          text: `✅ *Podcast ready!* Covering ${sectionCount} topics.\n🎧 <${audioUrl}|Listen now>`,
         },
       });
     } else {

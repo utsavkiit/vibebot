@@ -87,6 +87,7 @@ plugins:
   podcast:
     enabled: true
     tts_url: "http://localhost:8080"
+    serve_url: "http://localhost:8888"
     voice: "af_heart"
     model: "mlx-community/Kokoro-82M-bf16"
     output_dir: "~/VibeBot-Podcasts"
