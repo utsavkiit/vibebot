@@ -42,7 +42,7 @@ describe('deliveryWorker.run', () => {
     await run(db);
 
     const MockSender = SlackSender as ReturnType<typeof vi.fn>;
-    expect(MockSender.mock.instances[0].send).toHaveBeenCalledOnce();
+    expect(MockSender.mock.results[0].value.send).toHaveBeenCalledOnce();
     expect(getDeliverableMessages(db)).toHaveLength(0);
   });
 
@@ -77,8 +77,9 @@ describe('deliveryWorker.run', () => {
 
     // 2 delivery attempts + 1 failure notification attempt
     const MockSender = SlackSender as ReturnType<typeof vi.fn>;
-    const totalSendCalls = MockSender.mock.instances.reduce(
-      (sum: number, inst: { send: ReturnType<typeof vi.fn> }) => sum + inst.send.mock.calls.length,
+    const totalSendCalls = MockSender.mock.results.reduce(
+      (sum: number, result: { value: { send: ReturnType<typeof vi.fn> } }) =>
+        sum + result.value.send.mock.calls.length,
       0,
     );
     expect(totalSendCalls).toBe(3);

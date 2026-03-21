@@ -128,7 +128,8 @@ describe('NewsPlugin.buildDigest', () => {
       .prepare('SELECT payload FROM outbound_messages WHERE id = ?')
       .get(msgId) as { payload: string };
     const allText = row.payload;
-    expect(allText).toContain('Headline One');
+    // summarizeArticle mock returns ['Summary.', 'Why.', '📰'] — the headline in the
+    // payload is what the LLM returns, not the raw article title.
     expect(allText).toContain('Summary.');
     expect(allText).toContain('Source A');
   });
