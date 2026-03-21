@@ -26,6 +26,16 @@ plugins:
     # location: "San Francisco, CA"   # Uncomment when implementing
     # max_price: 1500000
 
+  gnews:
+    enabled: true
+    article_count: 50
+    feed_url: "https://news.google.com/rss"   # Top stories; use /rss/topics/<id> for categories
+    embeddings:
+      provider: ollama           # ollama | openai
+      model: "nomic-embed-text"  # ollama: pull with `ollama pull nomic-embed-text`
+      # provider: openai
+      # model: text-embedding-3-small   # requires OPENAI_API_KEY in .env
+
 # ---------------------------------------------------------------------------
 # Delivery settings
 # ---------------------------------------------------------------------------
