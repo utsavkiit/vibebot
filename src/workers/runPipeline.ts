@@ -41,7 +41,8 @@ interface PodcastPluginConfig {
   voice?: string;
   model?: string;
   output_dir?: string;
-  digest_types?: string[];
+  story_count?: number;
+  source_plugins?: string[];
 }
 
 interface Config {
@@ -90,9 +91,11 @@ export async function runPipeline(config: Config, pluginFilter?: string): Promis
         model: podcastCfg.model ?? 'mlx-community/Kokoro-82M-bf16',
         outputDir: podcastCfg.output_dir ?? '~/VibeBot-Podcasts',
         serveUrl: podcastCfg.serve_url ?? 'http://localhost:8888',
-        digestTypes: podcastCfg.digest_types ?? [
-          'us_news_digest', 'world_news_digest', 'india_news_digest',
-          'sports_digest', 'tech_news_digest', 'stocks_news_digest',
+        storyCount: podcastCfg.story_count ?? 2,
+        sourcePlugins: podcastCfg.source_plugins ?? [
+          'us_news', 'world_news', 'india_news',
+          'sports_f1', 'sports_soccer', 'sports_cricket', 'sports_tennis',
+          'tech_news', 'stocks_news',
         ],
       }));
     } else {
