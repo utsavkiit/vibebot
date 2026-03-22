@@ -99,6 +99,38 @@ SQLite outbound_messages (today's 6 topic digests)
 
 ---
 
+## Dependencies
+
+### Node.js (managed by `package.json` / `npm install`)
+| Package | Purpose |
+|---------|---------|
+| `@langchain/core` | LangChain base types |
+| `@langchain/ollama` | Ollama LLM + embeddings adapter |
+| `@langchain/anthropic` | Anthropic/Claude LLM adapter |
+| `@langchain/openai` | OpenAI LLM adapter |
+| `better-sqlite3` | SQLite database driver |
+| `dotenv` | Loads `.env` secrets |
+| `js-yaml` | Parses `config.yaml` |
+| `rss-parser` | Fetches + parses Google News RSS feeds |
+
+### System (installed manually — not tracked by npm)
+| Dependency | Installed via | Purpose |
+|------------|--------------|---------|
+| Node.js | Homebrew | Runs the bot |
+| Ollama | [ollama.ai](https://ollama.ai) | Local LLM runtime |
+| `qwen3:8b` (model) | `ollama pull qwen3:8b` | LLM for summarization + podcast scripting |
+| `nomic-embed-text` (model) | `ollama pull nomic-embed-text` | Embeddings for headline clustering |
+| mlx-audio | `uv tool install mlx-audio` | Kokoro TTS server |
+| `Kokoro-82M-bf16` (model) | Auto-downloaded on first TTS request | Voice model |
+| misaki[en] | uv extra (`--with "misaki[en]"`) | English text → phoneme converter |
+| spaCy + `en_core_web_sm` | uv extra + wheel | Grammar parser (used by misaki) |
+| ffmpeg | `brew install ffmpeg` | WAV → MP3 encoding |
+| Python 3 | Homebrew / system | Runs the podcast HTTP file server |
+| uv | [astral.sh/uv](https://astral.sh/uv) | Python package manager (for mlx-audio) |
+| Tailscale | `brew install tailscale` | Private VPN — iPhone access to Mac mini |
+
+---
+
 ## Local Services (always-on, managed by launchd)
 
 | Service | Binary | Port | Purpose |
