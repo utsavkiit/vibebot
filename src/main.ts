@@ -39,8 +39,16 @@ async function main(): Promise<void> {
   const pluginFilter = pluginArgIdx !== -1 ? process.argv[pluginArgIdx + 1] : undefined;
   if (pluginFilter) console.info(`Plugin filter active: running only '${pluginFilter}'.`);
 
+  const dryRunArgIdx = process.argv.indexOf('--dry-run');
+  const dryRunDate = dryRunArgIdx !== -1 ? (process.argv[dryRunArgIdx + 1] ?? '') : undefined;
+
+  const storiesArgIdx = process.argv.indexOf('--stories');
+  const storiesOverride = storiesArgIdx !== -1 ? parseInt(process.argv[storiesArgIdx + 1], 10) : undefined;
+
+  const inspect = process.argv.includes('--inspect');
+
   const config = loadConfig(configPath);
-  await runPipeline(config as Parameters<typeof runPipeline>[0], pluginFilter);
+  await runPipeline(config as Parameters<typeof runPipeline>[0], pluginFilter, dryRunDate, storiesOverride, inspect);
   console.info('VibeBot pipeline complete.');
 }
 

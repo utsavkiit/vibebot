@@ -231,8 +231,10 @@ describe('GNewsFetcher', () => {
     expect(v0).not.toBe(v1);
   });
 
-  it('calls embedDocuments with title+source text', async () => {
-    const mockEmbedder = setupFetcher();
+  it('calls embedDocuments with title+source text when no description', async () => {
+    // Use items without contentSnippet to exercise the title+source fallback
+    const noDescItems = SAMPLE_RSS_ITEMS.map(({ contentSnippet: _cs, ...rest }) => rest);
+    const mockEmbedder = setupFetcher(noDescItems as typeof SAMPLE_RSS_ITEMS);
     const { GNewsFetcher } = await GNewsFetcherModule;
     await new GNewsFetcher({
       feedUrl: 'https://news.google.com/rss',

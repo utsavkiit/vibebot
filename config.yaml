@@ -32,57 +32,32 @@ plugins:
       provider: ollama
       model: "nomic-embed-text"
 
-  # --- Topic digest plugins (staggered hourly via launchd --plugin flag) ---
-  us_news:
+  # --- Unified news collector (all topics in one plugin) ---
+  news_collector:
     enabled: true
-    feed_url: "https://news.google.com/rss/search?q=US+news&hl=en-US&gl=US&ceid=US:en"
-    story_count: 3
+    fetch_count: 50    # headlines to fetch per feed
     embeddings:
       provider: ollama
       model: "nomic-embed-text"
-
-  world_news:
-    enabled: true
-    feed_url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pXVGlnQVAB"
-    story_count: 3
-    embeddings:
-      provider: ollama
-      model: "nomic-embed-text"
-
-  india_news:
-    enabled: true
-    feed_url: "https://news.google.com/rss/search?q=India+news&hl=en-IN&gl=IN&ceid=IN:en"
-    story_count: 3
-    embeddings:
-      provider: ollama
-      model: "nomic-embed-text"
-
-  sports:
-    enabled: true
     feeds:
-      f1: "https://news.google.com/rss/search?q=formula+1+f1+racing&hl=en-US&gl=US&ceid=US:en"
-      soccer: "https://news.google.com/rss/search?q=soccer+football+premier+league&hl=en-US&gl=US&ceid=US:en"
-      cricket: "https://news.google.com/rss/search?q=cricket+test+IPL&hl=en-US&gl=US&ceid=US:en"
-      tennis: "https://news.google.com/rss/search?q=tennis+ATP+WTA&hl=en-US&gl=US&ceid=US:en"
-    embeddings:
-      provider: ollama
-      model: "nomic-embed-text"
-
-  tech_news:
-    enabled: true
-    feed_url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
-    story_count: 3
-    embeddings:
-      provider: ollama
-      model: "nomic-embed-text"
-
-  stocks_news:
-    enabled: true
-    feed_url: "https://news.google.com/rss/search?q=US+stock+market+NYSE+NASDAQ&hl=en-US&gl=US&ceid=US:en"
-    story_count: 3
-    embeddings:
-      provider: ollama
-      model: "nomic-embed-text"
+      - name: us_news
+        url: "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
+      - name: world_news
+        url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pXVGlnQVAB"
+      - name: india_news
+        url: "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en"
+      # - name: tech_news
+      #   url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
+      # - name: stocks_news
+      #   url: "https://news.google.com/rss/search?q=US+stock+market+NYSE+NASDAQ&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_f1
+      #   url: "https://news.google.com/rss/search?q=formula+1+f1+racing&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_soccer
+      #   url: "https://news.google.com/rss/search?q=soccer+football+premier+league&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_cricket
+      #   url: "https://news.google.com/rss/search?q=cricket+test+IPL&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_tennis
+      #   url: "https://news.google.com/rss/search?q=tennis+ATP+WTA&hl=en-US&gl=US&ceid=US:en"
 
   podcast:
     enabled: true
@@ -94,14 +69,20 @@ plugins:
     story_count: 2        # stories per topic (fewer = more depth per story)
     source_plugins:
       - us_news
-      - world_news
+      # - world_news
       - india_news
-      - sports_f1
-      - sports_soccer
-      - sports_cricket
-      - sports_tennis
-      - tech_news
-      - stocks_news
+      # - sports_f1
+      # - sports_soccer
+      # - sports_cricket
+      # - sports_tennis
+      # - tech_news
+      # - stocks_news
+
+# ---------------------------------------------------------------------------
+# Global digest settings (single unified Slack message across all topics)
+# ---------------------------------------------------------------------------
+global_digest:
+  story_count: 10  # top stories to include from global clustering pass
 
 # ---------------------------------------------------------------------------
 # Delivery settings
