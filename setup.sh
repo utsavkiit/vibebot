@@ -139,40 +139,12 @@ fi
 step "9/9" "Building TypeScript and installing launchd agents..."
 npm run build
 
-mkdir -p "$LAUNCH_AGENTS" "$LOG_DIR" "$HOME/VibeBot-Podcasts"
-
-PLISTS=(
-  com.vibebot.us_news
-  com.vibebot.world_news
-  com.vibebot.india_news
-  com.vibebot.sports
-  com.vibebot.tech_news
-  com.vibebot.stocks_news
-  com.vibebot.podcast
-  com.vibebot.mlx-audio
-  com.vibebot.podcast-server
-)
-
-for plist in "${PLISTS[@]}"; do
-  SRC="$REPO_DIR/launchd/$plist.plist"
-  DEST="$LAUNCH_AGENTS/$plist.plist"
-  if [ -f "$SRC" ]; then
-    cp "$SRC" "$DEST"
-    launchctl unload "$DEST" 2>/dev/null || true
-    launchctl load "$DEST"
-    echo "  Loaded: $plist"
-  else
-    warn "Missing plist: $SRC — skipping."
-  fi
-done
+bash "$REPO_DIR/scripts/install_launchd.sh"
 
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 echo -e "\n=== Setup complete! ===\n"
-echo "Active launchd jobs:"
-launchctl list | grep vibebot
-
 echo ""
 echo "Test a plugin now:"
 echo "  node dist/main.js --plugin us_news"

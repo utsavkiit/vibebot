@@ -8,6 +8,8 @@
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
     "test": "vitest run",
+    "launchd:install": "bash ./scripts/install-launch-agents.sh",
+    "launchd:reload": "bash ./scripts/reload-launch-agents.sh",
     "fetch-gnews": "ts-node src/scripts/fetchGNewsHeadlines.ts",
     "group-gnews": "ts-node src/scripts/groupGNewsHeadlines.ts",
     "summarize-gnews": "ts-node src/scripts/summarizeGNewsGroups.ts",
