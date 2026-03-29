@@ -1,19 +1,10 @@
-import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { BasePlugin } from '../../core/basePlugin';
-import {
-  getPendingRawItems,
-  insertOutboundMessage,
-  insertRawItem,
-  markRawItemProcessed,
-  RawItem,
-} from '../../core/db';
+import { insertOutboundMessage } from '../../core/db';
 import { buildHeader, buildFooter } from '../../core/messageUtils';
-import { HeadlineWithEmbedding } from '../gnews/index';
-import { clusterByTopic } from '../gnews/clusterer';
+import { RankedCluster } from '../../workers/globalDigestBuilder';
 import { summarizeGroupForPodcast } from './podcastSummarizer';
-import { generatePodcastScript, TopicSection, getTopicLabel } from './scriptWriter';
+import { generatePodcastScript } from './scriptWriter';
 import { generateAudio, TtsConfig } from './ttsClient';
 
 export interface PodcastPluginConfig {
@@ -23,96 +14,32 @@ export interface PodcastPluginConfig {
   outputDir: string;
   serveUrl: string;
   storyCount: number;
-  sourcePlugins: string[];
 }
 
-interface CollectedTopic {
-  name: string;
-  headlines: HeadlineWithEmbedding[];
-}
-
-export class PodcastPlugin extends BasePlugin {
-  readonly name = 'podcast';
+export class PodcastPlugin {
   private config: PodcastPluginConfig;
 
   constructor(config: PodcastPluginConfig) {
-    super();
     this.config = config;
   }
 
-  async collect(db: Database.Database): Promise<number> {
-    const today = new Date().toISOString().split('T')[0];
+  async buildFromClusters(ranked: RankedCluster[], db: Database.Database, llm: BaseChatModel): Promise<number | null> {
+    const topClusters = ranked.slice(0, this.config.storyCount);
 
-    const topics: CollectedTopic[] = [];
-
-    for (const pluginName of this.config.sourcePlugins) {
-      // Read raw_items collected today for this topic plugin
-      const rows = db
-        .prepare(
-          `SELECT * FROM raw_items
-           WHERE source_type = ?
-             AND date(collected_at) = ?`,
-        )
-        .all(pluginName, today) as RawItem[];
-
-      if (!rows.length) {
-        console.warn(`[podcast] No raw_items found for '${pluginName}' today — skipping.`);
-        continue;
-      }
-
-      const headlines = rows
-        .map((row) => {
-          try {
-            return JSON.parse(row.payload) as HeadlineWithEmbedding;
-          } catch {
-            return null;
-          }
-        })
-        .filter((h): h is HeadlineWithEmbedding => h !== null && Array.isArray(h.vector));
-
-      if (headlines.length) {
-        topics.push({ name: pluginName, headlines });
-      }
+    if (!topClusters.length) {
+      console.info('[podcast] No clusters to build from.');
+      return null;
     }
 
-    if (!topics.length) {
-      console.warn('[podcast] No headline data found for any topic today — skipping collect.');
-      return 0;
-    }
+    const date = new Date().toISOString().split('T')[0];
+    console.info(`[podcast] Summarizing ${topClusters.length} stories...`);
 
-    const externalId = crypto.createHash('md5').update(today + 'podcast').digest('hex');
-    const inserted = insertRawItem(db, 'podcast', externalId, { date: today, topics });
-    return inserted ? 1 : 0;
-  }
+    const stories = await Promise.all(
+      topClusters.map((cluster) => summarizeGroupForPodcast(llm, cluster.headlines)),
+    );
 
-  async buildDigest(db: Database.Database, llm: BaseChatModel): Promise<number | null> {
-    const items = getPendingRawItems(db, 'podcast');
-    if (!items.length) return null;
-
-    const item = items[0];
-    const { date, topics } = JSON.parse(item.payload) as { date: string; topics: CollectedTopic[] };
-
-    console.info(`[podcast] Summarizing ${topics.length} topics (${this.config.storyCount} stories each)...`);
-
-    const sections: TopicSection[] = [];
-
-    for (const topic of topics) {
-      const groups = clusterByTopic(topic.headlines, 0.70);
-      const topGroups = groups.slice(0, this.config.storyCount);
-
-      const stories = await Promise.all(
-        topGroups.map((group) => summarizeGroupForPodcast(llm, group.headlines)),
-      );
-
-      sections.push({
-        topic: topic.name,
-        label: getTopicLabel(topic.name),
-        stories,
-      });
-    }
-
-    console.info(`[podcast] Generating script from ${sections.length} sections...`);
-    const script = await generatePodcastScript(llm, sections, date);
+    console.info('[podcast] Generating script...');
+    const script = await generatePodcastScript(llm, stories, date);
 
     const ttsConfig: TtsConfig = {
       ttsUrl: this.config.ttsUrl,
@@ -132,9 +59,9 @@ export class PodcastPlugin extends BasePlugin {
       console.warn(`[podcast] TTS failed — posting script-only. Error: ${(err as Error).message}`);
     }
 
-    const blocks = this.buildSlackBlocks(date, audioUrl, script, sections.length);
+    const blocks = this.buildSlackBlocks(date, audioUrl, script, topClusters.length);
     const msgId = insertOutboundMessage(db, 'slack_default', 'podcast_digest', blocks, 3);
-    markRawItemProcessed(db, item.id);
+    console.info(`[podcast] Digest built → outbound_message id=${msgId}.`);
     return msgId;
   }
 
@@ -142,7 +69,7 @@ export class PodcastPlugin extends BasePlugin {
     date: string,
     audioUrl: string | null,
     script: string,
-    sectionCount: number,
+    storyCount: number,
   ): object[] {
     const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -162,7 +89,7 @@ export class PodcastPlugin extends BasePlugin {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `✅ *Podcast ready!* Covering ${sectionCount} topics.\n🎧 <${audioUrl}|Listen now>`,
+          text: `✅ *Podcast ready!* Covering ${storyCount} top stories.\n🎧 <${audioUrl}|Listen now>`,
         },
       });
     } else {

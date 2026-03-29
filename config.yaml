@@ -66,17 +66,7 @@ plugins:
     voice: "af_heart"
     model: "mlx-community/Kokoro-82M-bf16"
     output_dir: "~/VibeBot-Podcasts"
-    story_count: 2        # stories per topic (fewer = more depth per story)
-    source_plugins:
-      - us_news
-      # - world_news
-      - india_news
-      # - sports_f1
-      # - sports_soccer
-      # - sports_cricket
-      # - sports_tennis
-      # - tech_news
-      # - stocks_news
+    story_count: 5        # top ranked stories to cover in the podcast
 
 # ---------------------------------------------------------------------------
 # Global digest settings (single unified Slack message across all topics)

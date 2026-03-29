@@ -5,7 +5,6 @@ import { NewsPlugin } from '../plugins/news';
 import { NewsCollectorPlugin, FeedConfig } from '../plugins/newsCollector';
 import { PodcastPlugin } from '../plugins/podcast';
 import * as collector from './collector';
-import * as digestBuilder from './digestBuilder';
 import * as deliveryWorker from './deliveryWorker';
 import { GlobalDigestBuilder } from './globalDigestBuilder';
 
@@ -31,7 +30,6 @@ interface PodcastPluginConfig {
   model?: string;
   output_dir?: string;
   story_count?: number;
-  source_plugins?: string[];
 }
 
 interface Config {
@@ -48,7 +46,10 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
   initDb(DB_PATH);
   const db = getConnection(DB_PATH);
 
-  const plugins = [];
+  // Collect plugins (news only — podcast is no longer a collector)
+  const collectPlugins: Array<NewsPlugin | NewsCollectorPlugin> = [];
+  let podcastPlugin: PodcastPlugin | null = null;
+
   for (const [name, cfg] of Object.entries(pluginsCfg)) {
     if (!cfg.enabled) {
       console.info(`Plugin '${name}' is disabled — skipping.`);
@@ -56,46 +57,47 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
     }
 
     if (name === 'news') {
-      plugins.push(new NewsPlugin(cfg.article_count ?? 5));
+      collectPlugins.push(new NewsPlugin(cfg.article_count ?? 5));
     } else if (name === 'news_collector') {
       const collectorCfg = cfg as NewsCollectorPluginConfig;
-      plugins.push(new NewsCollectorPlugin({
+      collectPlugins.push(new NewsCollectorPlugin({
         feeds: (collectorCfg.feeds ?? []) as FeedConfig[],
         fetchCount: collectorCfg.fetch_count ?? 50,
         embeddings: collectorCfg.embeddings,
       }));
     } else if (name === 'podcast') {
       const podcastCfg = cfg as PodcastPluginConfig;
-      plugins.push(new PodcastPlugin({
+      podcastPlugin = new PodcastPlugin({
         ttsUrl: podcastCfg.tts_url ?? 'http://localhost:8080',
         voice: podcastCfg.voice ?? 'af_heart',
         model: podcastCfg.model ?? 'mlx-community/Kokoro-82M-bf16',
         outputDir: podcastCfg.output_dir ?? '~/VibeBot-Podcasts',
         serveUrl: podcastCfg.serve_url ?? 'http://localhost:8888',
-        storyCount: podcastCfg.story_count ?? 2,
-        sourcePlugins: podcastCfg.source_plugins ?? [
-          'us_news', 'world_news', 'india_news',
-          'sports_f1', 'sports_soccer', 'sports_cricket', 'sports_tennis',
-          'tech_news', 'stocks_news',
-        ],
-      }));
+        storyCount: podcastCfg.story_count ?? 5,
+      });
     } else {
       console.warn(`Plugin '${name}' is enabled but not registered — skipping.`);
     }
   }
 
-  // Apply plugin filter if --plugin flag was passed
-  const activePlugins = pluginFilter
-    ? plugins.filter((p) => p.name === pluginFilter)
-    : plugins;
+  // Apply plugin filter (only applies to collect plugins)
+  const activeCollectPlugins = pluginFilter
+    ? collectPlugins.filter((p) => p.name === pluginFilter)
+    : collectPlugins;
 
-  if (pluginFilter && !activePlugins.length) {
+  if (pluginFilter === 'podcast') {
+    console.warn('Podcast runs as part of the main pipeline — use no filter to run everything.');
+    db.close();
+    process.exit(1);
+  }
+
+  if (pluginFilter && !activeCollectPlugins.length) {
     console.error(`Plugin filter '${pluginFilter}' matched no registered plugins.`);
     db.close();
     process.exit(1);
   }
 
-  if (!activePlugins.length) {
+  if (!activeCollectPlugins.length && !podcastPlugin) {
     console.warn('No plugins enabled — nothing to run.');
     db.close();
     return;
@@ -109,7 +111,7 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
 
   if (inspect) {
     console.info('Stage 1: Collecting raw data.');
-    await collector.run(activePlugins, db);
+    await collector.run(activeCollectPlugins, db);
     console.info('Inspect mode: clustering without LLM.');
     globalBuilder.inspectClusters(db);
     db.close();
@@ -125,20 +127,15 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
   }
 
   console.info('Stage 1: Collecting raw data.');
-  await collector.run(activePlugins, db);
+  await collector.run(activeCollectPlugins, db);
 
-  console.info('Stage 2: Building digests.');
-  const nonNewsPlugins = activePlugins.filter((p) => p.name !== 'news_collector');
+  console.info('Stage 2: Clustering and building digests.');
+  const ranked = globalBuilder.getRankedClusters(db);
 
-  // Run non-news plugins (e.g. podcast) before globalBuilder so they can
-  // read pending news raw_items before globalBuilder marks them processed.
-  if (nonNewsPlugins.length > 0) {
-    await digestBuilder.run(nonNewsPlugins, db, llm);
-  }
+  await globalBuilder.buildFromClusters(ranked, db, llm);
 
-  const globalMsgId = await globalBuilder.run(db, llm);
-  if (globalMsgId === null) {
-    console.info('Global digest: no news items to process.');
+  if (podcastPlugin) {
+    await podcastPlugin.buildFromClusters(ranked, db, llm);
   }
 
   console.info('Stage 3: Delivering messages.');

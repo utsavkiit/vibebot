@@ -6,6 +6,8 @@ import { clusterByTopic, TopicGroup } from '../plugins/gnews/clusterer';
 import { summarizeGroup } from '../plugins/gnews/groupSummarizer';
 import { HeadlineWithEmbedding } from '../plugins/gnews/index';
 
+export type RankedCluster = TopicGroup & { feedCount: number; bestTier: number };
+
 const SOURCE_LABELS: Record<string, string> = {
   us_news: '🇺🇸 US',
   world_news: '🌍 World',
@@ -52,15 +54,36 @@ function pickBestUrl(headlines: HeadlineWithEmbedding[]): string {
   return sorted[0].url;
 }
 
+function parseEmbeddedItems(rawItems: RawItem[]): {
+  embeddedItems: Array<{ item: RawItem; headline: HeadlineWithEmbedding }>;
+  sportsItems: Array<{ item: RawItem; sourceType: string; headline: HeadlineWithEmbedding }>;
+} {
+  const embeddedItems: Array<{ item: RawItem; headline: HeadlineWithEmbedding }> = [];
+  const sportsItems: Array<{ item: RawItem; sourceType: string; headline: HeadlineWithEmbedding }> = [];
+
+  for (const item of rawItems) {
+    if (item.source_type === 'podcast') continue;
+    const payload = JSON.parse(item.payload) as HeadlineWithEmbedding;
+    if (item.source_type.startsWith('sports_')) {
+      sportsItems.push({ item, sourceType: item.source_type, headline: payload });
+    } else {
+      embeddedItems.push({ item, headline: payload });
+    }
+  }
+
+  return { embeddedItems, sportsItems };
+}
+
 /**
  * Cluster all headlines cross-feed at a high threshold (0.85) to catch only
  * genuine same-story duplicates, then rank by:
  *   1. Number of unique feeds represented (cross-regional stories first)
  *   2. Cluster size (more coverage = more important)
+ *   3. Best source tier in the cluster (more credible sources rank higher)
  */
-function clusterAndRank(
+function computeRankedClusters(
   embeddedItems: Array<{ item: RawItem; headline: HeadlineWithEmbedding }>,
-): Array<TopicGroup & { feedCount: number }> {
+): RankedCluster[] {
   const urlToFeed = new Map<string, string>();
   const seen = new Set<string>();
   const deduped: typeof embeddedItems = [];
@@ -74,7 +97,7 @@ function clusterAndRank(
   const allHeadlines = deduped.map((e) => e.headline);
   const groups = clusterByTopic(allHeadlines, 0.85);
 
-  const ranked = groups.map((g) => {
+  const ranked: RankedCluster[] = groups.map((g) => {
     const feedCount = new Set(g.headlines.map((h) => urlToFeed.get(h.url))).size;
     const bestTier = Math.min(...g.headlines.map((h) => sourceTier(h.source)));
     return { ...g, feedCount, bestTier };
@@ -83,7 +106,7 @@ function clusterAndRank(
   ranked.sort((a, b) => {
     if (b.feedCount !== a.feedCount) return b.feedCount - a.feedCount;
     if (b.headlines.length !== a.headlines.length) return b.headlines.length - a.headlines.length;
-    return a.bestTier - b.bestTier; // lower tier index = more credible
+    return a.bestTier - b.bestTier;
   });
 
   return ranked;
@@ -100,21 +123,40 @@ export class GlobalDigestBuilder {
     this.storyCount = config.storyCount;
   }
 
-  async run(db: Database.Database, llm: BaseChatModel): Promise<number | null> {
+  /** Cluster and rank all pending news items. Called once per pipeline run, shared with podcast. */
+  getRankedClusters(db: Database.Database): RankedCluster[] {
     const rawItems = getAllPendingRawItems(db);
+    const { embeddedItems } = parseEmbeddedItems(rawItems);
+    return computeRankedClusters(embeddedItems);
+  }
 
+  /** Build Slack digest from pre-computed ranked clusters, then mark all pending items processed. */
+  async buildFromClusters(ranked: RankedCluster[], db: Database.Database, llm: BaseChatModel): Promise<number | null> {
+    const rawItems = getAllPendingRawItems(db);
     if (!rawItems.length) {
       console.info('GlobalDigestBuilder: no pending items.');
       return null;
     }
 
-    const blocks = await this.buildBlocks(rawItems, llm);
+    const { embeddedItems, sportsItems } = parseEmbeddedItems(rawItems);
+    const urlToSourceType = new Map<string, string>();
+    for (const { item, headline } of embeddedItems) {
+      urlToSourceType.set(headline.url, item.source_type);
+    }
+
+    const blocks = await this.buildBlocksFromClusters(ranked, sportsItems, urlToSourceType, llm);
 
     const msgId = insertOutboundMessage(db, 'slack_default', 'global_digest', blocks, 3);
     for (const item of rawItems) markRawItemProcessed(db, item.id);
 
     console.info(`GlobalDigestBuilder: digest built → outbound_message id=${msgId}.`);
     return msgId;
+  }
+
+  /** Convenience method: cluster + build in one step (used by preview). */
+  async run(db: Database.Database, llm: BaseChatModel): Promise<number | null> {
+    const ranked = this.getRankedClusters(db);
+    return this.buildFromClusters(ranked, db, llm);
   }
 
   inspectClusters(db: Database.Database): void {
@@ -125,24 +167,13 @@ export class GlobalDigestBuilder {
       return;
     }
 
-    const embeddedItems: Array<{ item: RawItem; headline: HeadlineWithEmbedding }> = [];
-    const sportsItems: Array<{ sourceType: string; headline: HeadlineWithEmbedding }> = [];
-
-    for (const item of rawItems) {
-      if (item.source_type === 'podcast') continue;
-      const payload = JSON.parse(item.payload) as HeadlineWithEmbedding;
-      if (item.source_type.startsWith('sports_')) {
-        sportsItems.push({ sourceType: item.source_type, headline: payload });
-      } else {
-        embeddedItems.push({ item, headline: payload });
-      }
-    }
+    const { embeddedItems, sportsItems } = parseEmbeddedItems(rawItems);
 
     console.info(`\n=== CLUSTER INSPECTION (${rawItems.length} total items) ===\n`);
     console.info(`Non-sports: ${embeddedItems.length} items  |  Sports: ${sportsItems.length} items\n`);
 
     if (embeddedItems.length > 0) {
-      const ranked = clusterAndRank(embeddedItems);
+      const ranked = computeRankedClusters(embeddedItems);
 
       console.info(`Clusters formed: ${ranked.length}  (showing top ${this.storyCount})\n`);
       console.info('--- TOP CLUSTERS ---');
@@ -190,63 +221,52 @@ export class GlobalDigestBuilder {
     }
 
     console.info(`Preview: building digest from ${newsItems.length} items collected on ${date}...`);
-    const blocks = await this.buildBlocks(newsItems, llm);
+    const { embeddedItems, sportsItems } = parseEmbeddedItems(newsItems);
+    const ranked = computeRankedClusters(embeddedItems);
+    const urlToSourceType = new Map<string, string>();
+    for (const { item, headline } of embeddedItems) {
+      urlToSourceType.set(headline.url, item.source_type);
+    }
+    const blocks = await this.buildBlocksFromClusters(ranked, sportsItems, urlToSourceType, llm);
     console.info('\n--- DIGEST PREVIEW ---');
     console.info(JSON.stringify(blocks, null, 2));
     console.info('--- END PREVIEW ---\n');
   }
 
-  private async buildBlocks(rawItems: RawItem[], llm: BaseChatModel): Promise<object[]> {
-    const embeddedItems: Array<{ item: RawItem; headline: HeadlineWithEmbedding }> = [];
-    const sportsItems: Array<{ item: RawItem; sourceType: string; headline: HeadlineWithEmbedding & { sport?: string } }> = [];
-
-    for (const item of rawItems) {
-      if (item.source_type === 'podcast') continue;
-      const payload = JSON.parse(item.payload) as HeadlineWithEmbedding & { sport?: string };
-      if (item.source_type.startsWith('sports_')) {
-        sportsItems.push({ item, sourceType: item.source_type, headline: payload });
-      } else {
-        embeddedItems.push({ item, headline: payload });
-      }
-    }
-
+  private async buildBlocksFromClusters(
+    ranked: RankedCluster[],
+    sportsItems: Array<{ item: RawItem; sourceType: string; headline: HeadlineWithEmbedding }>,
+    urlToSourceType: Map<string, string>,
+    llm: BaseChatModel,
+  ): Promise<object[]> {
     const blocks: object[] = [...buildHeader(), { type: 'divider' }];
 
-    if (embeddedItems.length > 0) {
-      const urlToSourceType = new Map<string, string>();
-      for (const { item, headline } of embeddedItems) {
-        urlToSourceType.set(headline.url, item.source_type);
-      }
+    const topGroups = ranked.slice(0, this.storyCount);
+    for (let i = 0; i < topGroups.length; i++) {
+      const group = topGroups[i];
+      const { headline, summary, emoji } = await summarizeGroup(llm, group.headlines);
+      const url = pickBestUrl(group.headlines);
+      const sources = [...new Set(group.headlines.map((h) => h.source))].join(', ');
 
-      const ranked = clusterAndRank(embeddedItems);
-      const topGroups = ranked.slice(0, this.storyCount);
+      const topicLabels = [
+        ...new Set(
+          group.headlines
+            .map((h) => SOURCE_LABELS[urlToSourceType.get(h.url) ?? ''] ?? '')
+            .filter(Boolean),
+        ),
+      ].join(' · ');
 
-      for (let i = 0; i < topGroups.length; i++) {
-        const group = topGroups[i];
-        const { headline, summary, emoji } = await summarizeGroup(llm, group.headlines);
-        const url = pickBestUrl(group.headlines);
-        const sources = [...new Set(group.headlines.map((h) => h.source))].join(', ');
+      let cardText = `${emoji} *${i + 1}. <${url}|${headline}>*`;
+      if (summary) cardText += `\n${summary}`;
+      const metaParts: string[] = [];
+      if (group.headlines.length > 1) metaParts.push(`${group.headlines.length} sources`);
+      if (topicLabels) metaParts.push(topicLabels);
+      if (metaParts.length) cardText += `\n_${metaParts.join(' · ')}_`;
 
-        const topicLabels = [
-          ...new Set(
-            group.headlines
-              .map((h) => SOURCE_LABELS[urlToSourceType.get(h.url) ?? ''] ?? '')
-              .filter(Boolean),
-          ),
-        ].join(' · ');
-
-        let cardText = `${emoji} *${i + 1}. <${url}|${headline}>*`;
-        if (summary) cardText += `\n${summary}`;
-        const metaParts: string[] = [];
-        if (group.headlines.length > 1) metaParts.push(`${group.headlines.length} sources`);
-        if (topicLabels) metaParts.push(topicLabels);
-        if (metaParts.length) cardText += `\n_${metaParts.join(' · ')}_`;
-
-        blocks.push({ type: 'section', text: { type: 'mrkdwn', text: cardText } });
-        blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📌 ${sources}` }] });
-        if (i < topGroups.length - 1 || sportsItems.length > 0) {
-          blocks.push({ type: 'divider' });
-        }
+      blocks.push({ type: 'section', text: { type: 'mrkdwn', text: cardText } });
+      blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📌 ${sources}` }] });
+      if (i < topGroups.length - 1 || sportsItems.length > 0) {
+        blocks.push({ type: 'divider' });
       }
     }
 
