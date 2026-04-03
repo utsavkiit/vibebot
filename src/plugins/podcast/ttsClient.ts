@@ -6,6 +6,7 @@ export interface TtsConfig {
   voice: string;
   model: string;
   outputDir: string;
+  fileBasename?: string;
 }
 
 export async function generateAudio(script: string, config: TtsConfig): Promise<string> {
@@ -13,7 +14,7 @@ export async function generateAudio(script: string, config: TtsConfig): Promise<
   fs.mkdirSync(outputDir, { recursive: true });
 
   const date = new Date().toISOString().split('T')[0];
-  const outputPath = path.join(outputDir, `${date}.mp3`);
+  const outputPath = path.join(outputDir, `${config.fileBasename ?? date}.mp3`);
 
   const response = await fetch(`${config.ttsUrl}/v1/audio/speech`, {
     method: 'POST',

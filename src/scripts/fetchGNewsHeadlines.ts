@@ -2,21 +2,25 @@ import path from 'path';
 import fs from 'fs';
 import * as dotenv from 'dotenv';
 import * as yaml from 'js-yaml';
-import { GNewsFetcher } from '../plugins/gnews/index';
+import { GNewsFetcher, HeadlineWithEmbedding } from '../plugins/gnews/index';
 
-interface GNewsPluginConfig {
-  enabled?: boolean;
-  article_count?: number;
-  feed_url?: string;
+interface FeedConfig {
+  name: string;
+  url: string;
+}
+
+interface NewsCollectorConfig {
+  fetch_count?: number;
   embeddings: {
     provider: string;
     model: string;
   };
+  feeds: FeedConfig[];
 }
 
 interface AppConfig {
   plugins?: {
-    gnews?: GNewsPluginConfig;
+    news_collector?: NewsCollectorConfig;
   };
 }
 
@@ -28,29 +32,34 @@ async function main(): Promise<void> {
   const configPath = path.join(repoRoot, 'config.yaml');
   const config = yaml.load(fs.readFileSync(configPath, 'utf8')) as AppConfig;
 
-  const gnewsCfg = config.plugins?.gnews;
-  if (!gnewsCfg?.enabled) {
-    console.info('gnews plugin is disabled in config.yaml — exiting.');
-    process.exit(0);
+  const collectorCfg = config.plugins?.news_collector;
+  if (!collectorCfg?.feeds?.length) {
+    console.error('No news_collector feeds configured in config.yaml.');
+    process.exit(1);
   }
 
-  const fetcher = new GNewsFetcher({
-    feedUrl: gnewsCfg.feed_url ?? 'https://news.google.com/rss',
-    articleCount: gnewsCfg.article_count ?? 50,
-    embeddings: gnewsCfg.embeddings,
-  });
+  const articleCount = collectorCfg.fetch_count ?? 50;
+  const allHeadlines: HeadlineWithEmbedding[] = [];
 
-  console.info('Fetching headlines and generating embeddings...');
-  const result = await fetcher.run();
+  for (const feed of collectorCfg.feeds) {
+    console.info(`Fetching feed: ${feed.name} (${feed.url})`);
+    const fetcher = new GNewsFetcher({
+      feedUrl: feed.url,
+      articleCount,
+      embeddings: collectorCfg.embeddings,
+    });
+    const result = await fetcher.run();
+    console.info(`  → ${result.fetched} headlines`);
+    allHeadlines.push(...result.headlines);
+  }
 
-  console.info(`Done. Fetched: ${result.fetched} headlines with embeddings.`);
-  if (result.headlines.length === 0) return;
+  console.info(`\nTotal: ${allHeadlines.length} headlines across ${collectorCfg.feeds.length} feeds.`);
+  if (allHeadlines.length === 0) return;
 
-  // Save to JSON for downstream use (grouping, clustering, etc.)
   const outputPath = path.join(repoRoot, 'gnews_headlines.json');
-  fs.writeFileSync(outputPath, JSON.stringify(result.headlines, null, 2), 'utf8');
+  fs.writeFileSync(outputPath, JSON.stringify(allHeadlines, null, 2), 'utf8');
   console.info(`Saved to ${outputPath}`);
-  console.info(`Vector dimensions: ${result.headlines[0].vector.length}`);
+  console.info(`Vector dimensions: ${allHeadlines[0].vector.length}`);
 }
 
 main().catch((err) => {
