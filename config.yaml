@@ -69,6 +69,16 @@ plugins:
     story_count: 5        # top ranked stories to cover in the podcast
 
 # ---------------------------------------------------------------------------
+# Research Podcast Agent settings
+# ---------------------------------------------------------------------------
+research_podcast:
+  topic_count: 3
+  max_searches_per_topic: 3
+  llm:
+    provider: ollama             # qwen3:8b supports tool calling natively; swap for gemma3:8b once pulled
+    model: qwen3:8b
+
+# ---------------------------------------------------------------------------
 # Global digest settings (single unified Slack message across all topics)
 # ---------------------------------------------------------------------------
 global_digest:
