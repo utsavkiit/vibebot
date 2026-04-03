@@ -84,6 +84,19 @@ export function getPendingRawItems(db: Database.Database, sourceType: string): R
     .all(sourceType) as RawItem[];
 }
 
+export function getAllPendingRawItems(db: Database.Database): RawItem[] {
+  return db
+    .prepare("SELECT * FROM raw_items WHERE status = 'pending'")
+    .all() as RawItem[];
+}
+
+export function getAllRawItemsForDate(db: Database.Database, date: string): RawItem[] {
+  // date should be in YYYY-MM-DD format; matches collected_at by day
+  return db
+    .prepare("SELECT * FROM raw_items WHERE date(collected_at) = date(?)")
+    .all(date) as RawItem[];
+}
+
 export function markRawItemProcessed(db: Database.Database, itemId: number): void {
   db.prepare("UPDATE raw_items SET status = 'processed' WHERE id = ?").run(itemId);
 }

@@ -118,6 +118,20 @@ python3 -m vibebot.main
 
 A `com.vibebot.plist` is included that runs VibeBot daily at 9 AM.
 
+Install or refresh all launchd jobs with:
+
+```bash
+bash scripts/install_launchd.sh
+```
+
+Reload all installed launchd jobs from the current repo plist files with:
+
+```bash
+bash scripts/reload_launchd.sh
+```
+
+Manual setup for just the daily job:
+
 ```bash
 cp com.vibebot.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.vibebot.plist

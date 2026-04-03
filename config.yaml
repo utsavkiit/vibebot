@@ -13,18 +13,66 @@ llm:
 # Set enabled: true to include a plugin in the daily digest.
 # ---------------------------------------------------------------------------
 plugins:
+  # --- Legacy plugins (disabled) ---
   news:
-    enabled: true
-    article_count: 5   # How many top headlines to include
+    enabled: false
+    article_count: 5
 
   stocks:
     enabled: false
-    # watchlist: [AAPL, MSFT, TSLA]   # Uncomment when implementing
 
   real_estate:
     enabled: false
-    # location: "San Francisco, CA"   # Uncomment when implementing
-    # max_price: 1500000
+
+  gnews:
+    enabled: false
+    article_count: 50
+    feed_url: "https://news.google.com/rss"
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
+
+  # --- Unified news collector (all topics in one plugin) ---
+  news_collector:
+    enabled: true
+    fetch_count: 50    # headlines to fetch per feed
+    embeddings:
+      provider: ollama
+      model: "nomic-embed-text"
+    feeds:
+      - name: us_news
+        url: "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
+      - name: world_news
+        url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pXVGlnQVAB"
+      - name: india_news
+        url: "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en"
+      # - name: tech_news
+      #   url: "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
+      # - name: stocks_news
+      #   url: "https://news.google.com/rss/search?q=US+stock+market+NYSE+NASDAQ&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_f1
+      #   url: "https://news.google.com/rss/search?q=formula+1+f1+racing&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_soccer
+      #   url: "https://news.google.com/rss/search?q=soccer+football+premier+league&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_cricket
+      #   url: "https://news.google.com/rss/search?q=cricket+test+IPL&hl=en-US&gl=US&ceid=US:en"
+      # - name: sports_tennis
+      #   url: "https://news.google.com/rss/search?q=tennis+ATP+WTA&hl=en-US&gl=US&ceid=US:en"
+
+  podcast:
+    enabled: true
+    tts_url: "http://localhost:8080"
+    serve_url: "http://100.104.18.70:8888"
+    voice: "af_heart"
+    model: "mlx-community/Kokoro-82M-bf16"
+    output_dir: "~/VibeBot-Podcasts"
+    story_count: 5        # top ranked stories to cover in the podcast
+
+# ---------------------------------------------------------------------------
+# Global digest settings (single unified Slack message across all topics)
+# ---------------------------------------------------------------------------
+global_digest:
+  story_count: 10  # top stories to include from global clustering pass
 
 # ---------------------------------------------------------------------------
 # Delivery settings
