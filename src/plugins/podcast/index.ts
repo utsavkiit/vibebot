@@ -46,6 +46,7 @@ export class PodcastPlugin {
       voice: this.config.voice,
       model: this.config.model,
       outputDir: this.config.outputDir,
+      fileBasename: `podcast-${date}`,
     };
 
     let audioUrl: string | null = null;

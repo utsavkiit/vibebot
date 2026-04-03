@@ -4,6 +4,7 @@ import { getLlm } from '../core/llmFactory';
 import { NewsPlugin } from '../plugins/news';
 import { NewsCollectorPlugin, FeedConfig } from '../plugins/newsCollector';
 import { PodcastPlugin } from '../plugins/podcast';
+import { ResearchPodcastPlugin } from '../plugins/podcast/researchPodcast';
 import * as collector from './collector';
 import * as deliveryWorker from './deliveryWorker';
 import { GlobalDigestBuilder } from './globalDigestBuilder';
@@ -32,11 +33,22 @@ interface PodcastPluginConfig {
   story_count?: number;
 }
 
+interface ResearchPodcastPluginConfig {
+  enabled?: boolean;
+  topic_count?: number;
+  max_searches_per_topic?: number;
+  llm: {
+    provider: string;
+    model: string;
+  };
+}
+
 interface Config {
   plugins?: Record<string, { enabled?: boolean; article_count?: number } & Partial<NewsCollectorPluginConfig> & Partial<PodcastPluginConfig>>;
   llm?: { provider?: string; model?: string };
   delivery?: { max_retries?: number };
   global_digest?: { story_count?: number };
+  research_podcast?: ResearchPodcastPluginConfig;
 }
 
 export async function runPipeline(config: Config, pluginFilter?: string, dryRunDate?: string, storiesOverride?: number, inspect?: boolean): Promise<void> {
@@ -49,6 +61,7 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
   // Collect plugins (news only — podcast is no longer a collector)
   const collectPlugins: Array<NewsPlugin | NewsCollectorPlugin> = [];
   let podcastPlugin: PodcastPlugin | null = null;
+  let researchPodcastPlugin: ResearchPodcastPlugin | null = null;
 
   for (const [name, cfg] of Object.entries(pluginsCfg)) {
     if (!cfg.enabled) {
@@ -80,6 +93,30 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
     }
   }
 
+  const researchCfg = config.research_podcast;
+  if (researchCfg && researchCfg.enabled !== false) {
+    const podcastCfg = pluginsCfg.podcast as PodcastPluginConfig | undefined;
+    if (!podcastCfg?.enabled) {
+      console.warn('Research podcast is configured but podcast plugin is disabled; skipping research podcast.');
+    } else {
+      researchPodcastPlugin = new ResearchPodcastPlugin({
+        repoRoot: path.resolve(__dirname, '../..'),
+        research: {
+          topicCount: researchCfg.topic_count ?? 3,
+          maxSearchesPerTopic: researchCfg.max_searches_per_topic ?? 3,
+          llm: researchCfg.llm,
+        },
+        runtime: {
+          ttsUrl: podcastCfg.tts_url ?? 'http://localhost:8080',
+          voice: podcastCfg.voice ?? 'af_heart',
+          model: podcastCfg.model ?? 'mlx-community/Kokoro-82M-bf16',
+          outputDir: podcastCfg.output_dir ?? '~/VibeBot-Podcasts',
+          serveUrl: podcastCfg.serve_url ?? 'http://localhost:8888',
+        },
+      });
+    }
+  }
+
   // Apply plugin filter (only applies to collect plugins)
   const activeCollectPlugins = pluginFilter
     ? collectPlugins.filter((p) => p.name === pluginFilter)
@@ -97,7 +134,7 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
     process.exit(1);
   }
 
-  if (!activeCollectPlugins.length && !podcastPlugin) {
+  if (!activeCollectPlugins.length && !podcastPlugin && !researchPodcastPlugin) {
     console.warn('No plugins enabled — nothing to run.');
     db.close();
     return;
@@ -131,6 +168,14 @@ export async function runPipeline(config: Config, pluginFilter?: string, dryRunD
 
   console.info('Stage 2: Clustering and building digests.');
   const ranked = globalBuilder.getRankedClusters(db);
+
+  if (researchPodcastPlugin) {
+    try {
+      await researchPodcastPlugin.buildFromPendingHeadlines(db);
+    } catch (err) {
+      console.warn(`Research podcast failed - continuing without it. Error: ${(err as Error).message}`);
+    }
+  }
 
   await globalBuilder.buildFromClusters(ranked, db, llm);
 
